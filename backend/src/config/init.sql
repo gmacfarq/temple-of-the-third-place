@@ -1,13 +1,20 @@
--- Initialize core schema for Temple of the Third Place
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS tottp_db;
 
--- Drop tables if they exist
-DROP TABLE IF EXISTS donations;
-DROP TABLE IF EXISTS check_ins;
-DROP TABLE IF EXISTS sacraments;
-DROP TABLE IF EXISTS users;
+-- Create user if it doesn't exist
+CREATE USER IF NOT EXISTS 'tottp_user'@'%' IDENTIFIED BY 'ATJ391N2H+Civzc/hTihew';
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON tottp_db.* TO 'tottp_user'@'%';
+
+-- Flush privileges to apply changes
+FLUSH PRIVILEGES;
+
+-- Switch to the database
+USE tottp_db;
 
 -- Users and Authentication
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -20,7 +27,7 @@ CREATE TABLE users (
 );
 
 -- Sacraments
-CREATE TABLE sacraments (
+CREATE TABLE IF NOT EXISTS sacraments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(100) NOT NULL,
@@ -34,7 +41,7 @@ CREATE TABLE sacraments (
 );
 
 -- Check-ins (simplified)
-CREATE TABLE check_ins (
+CREATE TABLE IF NOT EXISTS check_ins (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     status ENUM('waiting', 'in_progress', 'completed') DEFAULT 'waiting',
@@ -46,7 +53,7 @@ CREATE TABLE check_ins (
 );
 
 -- Donations (simplified to sacrament-only)
-CREATE TABLE donations (
+CREATE TABLE IF NOT EXISTS donations (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     sacrament_id INT NOT NULL,
@@ -57,7 +64,7 @@ CREATE TABLE donations (
 );
 
 -- Insert initial admin user (password: admin123 - change this in production!)
-INSERT INTO users (email, password_hash, first_name, last_name, role)
+INSERT IGNORE INTO users (email, password_hash, first_name, last_name, role)
 VALUES (
     'admin@thirdplace.temple',
     '$2b$10$vCcQBngWM8odVMCjqOZnYuMBuoMnEBZBEPPZuKTlIrIw9JzLnrG62',

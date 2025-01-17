@@ -1,5 +1,4 @@
 services:
-  # Your Node.js backend service
   backend:
     build:
       context: .
@@ -11,28 +10,40 @@ services:
     environment:
       - DB_HOST=db
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # Add this line
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
     command: npm run dev
+    networks:
+      - tottp_network  # Add this line
 
-  # MySQL Database service
   db:
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    env_file:
-      - .env
-    environment:
-      - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root_password_here}
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./backend/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+      image: mysql:8.0
+      ports:
+        - "3306:3306"
+      env_file:
+        - .env
+      environment:
+        - MYSQL_DATABASE=${DB_NAME}
+        - MYSQL_USER=${DB_USER}
+        - MYSQL_PASSWORD=${DB_PASSWORD}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_AUTHENTICATION_PLUGIN=mysql_native_password 
+      command: --default-authentication-plugin=mysql_native_password
+      volumes:
+        - mysql_data:/var/lib/mysql
+        - ./backend/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+      networks:
+        - tottp_network
+      healthcheck:
+        test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
 
-# Define persistent storage for MySQL data
+networks:
+  tottp_network:
 volumes:
   mysql_data:

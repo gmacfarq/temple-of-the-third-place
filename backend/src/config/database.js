@@ -1,16 +1,22 @@
 const mysql = require('mysql2/promise');
-require('dotenv').config();
 
-// Create a connection pool instead of single connections
-// This helps manage database connections efficiently
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
+  host: process.env.DB_HOST || 'db',
+  port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  waitForConnections: true,  // Queue queries when no connection is available
-  connectionLimit: 10,       // Maximum number of connections to create at once
-  queueLimit: 0             // Unlimited queueing
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  connectTimeout: 30000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
+});
+
+// Add error handling
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle connection', err);
 });
 
 module.exports = pool;
