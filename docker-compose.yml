@@ -8,30 +8,33 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "3000:3000"           # Maps port 3000 on your computer to 3000 in container
+      - "3000:3000"
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - DB_HOST=db            # Points to the database service below
+      - DB_HOST=db
     depends_on:
-      - db                    # Ensures database starts first
+      - db
     volumes:
-      - ./backend:/usr/src/app              # For live code updates
-      - /usr/src/app/node_modules           # Keeps node_modules in container
-    command: npm run dev                    # Runs with nodemon for development
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
 
   # MySQL Database service
   db:
     image: mysql:8.0
     ports:
-      - "3306:3306"          # Access MySQL from your computer
+      - "3306:3306"
+    env_file:
+      - .env
     environment:
-      - MYSQL_DATABASE=tottp_db
-      - MYSQL_USER=tottp_user
-      - MYSQL_PASSWORD=your_password_here
-      - MYSQL_ROOT_PASSWORD=root_password_here
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root_password_here}
     volumes:
-      - mysql_data:/var/lib/mysql                                    # Persists database data
-      - ./backend/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql   # Runs on first startup
+      - mysql_data:/var/lib/mysql
+      - ./backend/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 # Define persistent storage for MySQL data
 volumes:
