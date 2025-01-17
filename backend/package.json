@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Temple of the Ten Thousand Paths Backend",
+  "description": "Temple of the Third Place Backend",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

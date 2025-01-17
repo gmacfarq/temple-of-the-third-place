@@ -1,15 +1,3 @@
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS tottp_db;
-
--- Create user if it doesn't exist
-CREATE USER IF NOT EXISTS 'tottp_user'@'%' IDENTIFIED BY 'ATJ391N2H+Civzc/hTihew';
-
--- Grant privileges
-GRANT ALL PRIVILEGES ON tottp_db.* TO 'tottp_user'@'%';
-
--- Flush privileges to apply changes
-FLUSH PRIVILEGES;
-
 -- Switch to the database
 USE tottp_db;
 

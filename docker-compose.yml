@@ -11,37 +11,36 @@ services:
       - DB_HOST=db
     depends_on:
       db:
-        condition: service_healthy  # Add this line
+        condition: service_healthy
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
     command: npm run dev
     networks:
-      - tottp_network  # Add this line
+      - tottp_network
 
   db:
-      image: mysql:8.0
-      ports:
-        - "3306:3306"
-      env_file:
-        - .env
-      environment:
-        - MYSQL_DATABASE=${DB_NAME}
-        - MYSQL_USER=${DB_USER}
-        - MYSQL_PASSWORD=${DB_PASSWORD}
-        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-        - MYSQL_AUTHENTICATION_PLUGIN=mysql_native_password 
-      command: --default-authentication-plugin=mysql_native_password
-      volumes:
-        - mysql_data:/var/lib/mysql
-        - ./backend/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
-      networks:
-        - tottp_network
-      healthcheck:
-        test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env
+    environment:
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-custom.cnf:/etc/mysql/conf.d/custom.cnf
+      - ./backend/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tottp_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   tottp_network:
