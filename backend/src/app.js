@@ -6,6 +6,8 @@ require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const sacramentRoutes = require('./routes/sacramentRoutes');
+const memberRoutes = require('./routes/memberRoutes');
 
 const app = express();
 
@@ -16,8 +18,10 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Routes
-console.log('Setting up auth routes');
+console.log('Setting up routes');
 app.use('/api/auth', authRoutes);
+app.use('/api/sacraments', sacramentRoutes);
+app.use('/api/members', memberRoutes);
 
 // Simple health check endpoint
 app.get('/health', (req, res) => {
