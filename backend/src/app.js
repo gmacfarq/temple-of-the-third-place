@@ -8,6 +8,8 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const sacramentRoutes = require('./routes/sacramentRoutes');
 const memberRoutes = require('./routes/memberRoutes');
+const donationRoutes = require('./routes/donationRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const app = express();
 
@@ -22,6 +24,8 @@ console.log('Setting up routes');
 app.use('/api/auth', authRoutes);
 app.use('/api/sacraments', sacramentRoutes);
 app.use('/api/members', memberRoutes);
+app.use('/api/donations', donationRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Simple health check endpoint
 app.get('/health', (req, res) => {
