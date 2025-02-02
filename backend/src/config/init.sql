@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('member', 'advisor', 'admin') DEFAULT 'member',
     subscription_status ENUM('none', 'active', 'expired') DEFAULT 'none',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_check_in TIMESTAMP NULL,
     INDEX idx_email (email)
 );
 
@@ -51,12 +52,12 @@ CREATE TABLE IF NOT EXISTS donations (
     FOREIGN KEY (sacrament_id) REFERENCES sacraments(id) ON DELETE CASCADE
 );
 
--- Insert initial admin user (password: admin123 - change this in production!)
-INSERT IGNORE INTO users (email, password_hash, first_name, last_name, role)
-VALUES (
-    'admin@thirdplace.temple',
-    '$2b$10$vCcQBngWM8odVMCjqOZnYuMBuoMnEBZBEPPZuKTlIrIw9JzLnrG62',
-    'Temple',
-    'Admin',
-    'admin'
-);
+-- -- Insert initial admin user (password: admin123 - change this in production!)
+-- INSERT IGNORE INTO users (email, password_hash, first_name, last_name, role)
+-- VALUES (
+--     'admin@thirdplace.temple',
+--     '$2b$10$vCcQBngWM8odVMCjqOZnYuMBuoMnEBZBEPPZuKTlIrIw9JzLnrG62',
+--     'Temple',
+--     'Admin',
+--     'admin'
+-- );

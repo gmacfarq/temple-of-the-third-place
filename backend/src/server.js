@@ -1,5 +1,6 @@
 const app = require('./app');
 const pool = require('./config/database');
+const seedAdmin = require('./config/seedAdmin');
 
 const PORT = process.env.PORT || 3000;
 const MAX_RETRIES = 20;
@@ -18,6 +19,9 @@ async function startServer() {
       const connection = await pool.getConnection();
       console.log('Database connection successful');
       connection.release();
+
+      // Seed admin user
+      await seedAdmin();
 
       app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);

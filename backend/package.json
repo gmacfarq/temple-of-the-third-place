@@ -11,7 +11,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.js\""
   },
-  "keywords": ["temple", "sacrament", "management"],
+  "keywords": [
+    "temple",
+    "sacrament",
+    "management"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -19,6 +23,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
@@ -33,8 +38,12 @@
     "supertest": "^7.0.0"
   },
   "nodemonConfig": {
-    "watch": ["src"],
+    "watch": [
+      "src"
+    ],
     "ext": "js,json",
-    "ignore": ["src/**/*.test.js"]
+    "ignore": [
+      "src/**/*.test.js"
+    ]
   }
 }
