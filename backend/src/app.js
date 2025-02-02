@@ -55,4 +55,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports = app;
+// Don't start the server if we're testing
+const server = process.env.NODE_ENV === 'test' ? null : app.listen(PORT);
+
+module.exports = { app, server };

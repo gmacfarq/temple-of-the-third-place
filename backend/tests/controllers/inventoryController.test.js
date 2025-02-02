@@ -1,36 +1,42 @@
 const request = require('supertest');
-const app = require('../../src/app');
+const { app } = require('../../src/app');
 const testHelper = require('../testHelper');
 
-let connection;
-let adminToken;
-let advisorToken;
-let memberToken;
-let testSacramentId;
-
-beforeAll(async () => {
-  connection = await testHelper.getTestConnection();
-  adminToken = testHelper.generateTestToken('admin');
-  advisorToken = testHelper.generateTestToken('advisor');
-  memberToken = testHelper.generateTestToken('member');
-});
-
-beforeEach(async () => {
-  await testHelper.clearDatabase(connection);
-
-  // Create test sacrament
-  const [sacrament] = await connection.query(
-    'INSERT INTO sacraments (name, type, num_storage, num_active) VALUES (?, ?, ?, ?)',
-    ['Test Sacrament', 'Test Type', 100, 20]
-  );
-  testSacramentId = sacrament.insertId;
-});
-
-afterAll(async () => {
-  await connection.end();
-});
-
 describe('Inventory Controller', () => {
+  let server;
+  let connection;
+  let adminToken;
+  let advisorToken;
+  let memberToken;
+  let testSacramentId;
+
+  beforeAll(async () => {
+    connection = await testHelper.getTestConnection();
+    server = await testHelper.startServer(app);
+    adminToken = testHelper.generateTestToken('admin');
+    advisorToken = testHelper.generateTestToken('advisor');
+    memberToken = testHelper.generateTestToken('member');
+  });
+
+  beforeEach(async () => {
+    await testHelper.clearDatabase(connection);
+
+    // Create test sacrament
+    const [sacrament] = await connection.query(
+      'INSERT INTO sacraments (name, type, num_storage, num_active) VALUES (?, ?, ?, ?)',
+      ['Test Sacrament', 'Test Type', 100, 20]
+    );
+    testSacramentId = sacrament.insertId;
+  });
+
+  afterEach(async () => {
+    await testHelper.clearDatabase(connection);
+  });
+
+  afterAll(async () => {
+    await testHelper.cleanup(server, connection);
+  });
+
   describe('POST /api/inventory/transfer', () => {
     it('should record inventory transfer in', async () => {
       const transferData = {

@@ -2,15 +2,23 @@ const pool = require('../config/database');
 
 const getAllSacraments = async (req, res) => {
   try {
+    console.log('Getting all sacraments...');
     const connection = await pool.getConnection();
+    console.log('Database connection established');
+
     const [sacraments] = await connection.query(
-      'SELECT * FROM sacraments ORDER BY created_at DESC'
+      'SELECT id, name, type, description, num_storage, num_active, suggested_donation FROM sacraments'
     );
+    console.log('Query executed, results:', sacraments);
+
     connection.release();
     res.json(sacraments);
   } catch (error) {
     console.error('Error in getAllSacraments:', error);
-    res.status(500).json({ message: 'Error fetching sacraments' });
+    res.status(500).json({
+      message: 'Error fetching sacraments',
+      error: error.message
+    });
   }
 };
 

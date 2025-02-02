@@ -11,7 +11,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.js\""
+    "format": "prettier --write \"src/**/*.js\"",
+    "init-test-db": "node scripts/initTestDb.js"
   },
   "keywords": [
     "temple",
@@ -50,8 +51,12 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFiles": ["dotenv/config"],
-    "testMatch": ["**/tests/**/*.test.js"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/server.js"
