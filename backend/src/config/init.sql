@@ -41,15 +41,45 @@ CREATE TABLE IF NOT EXISTS check_ins (
     INDEX idx_status (status)
 );
 
--- Donations (simplified to sacrament-only)
+-- Donations
 CREATE TABLE IF NOT EXISTS donations (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    sacrament_id INT NOT NULL,
+    member_id INT,
+    sacrament_id INT,
     amount DECIMAL(10,2) NOT NULL,
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id) ON DELETE CASCADE
+    FOREIGN KEY (member_id) REFERENCES users(id),
+    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id),
+    INDEX idx_member (member_id),
+    INDEX idx_sacrament (sacrament_id)
+);
+
+-- Inventory Transfers
+CREATE TABLE IF NOT EXISTS inventory_transfers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sacrament_id INT,
+    quantity INT NOT NULL,
+    type ENUM('in', 'out') NOT NULL,
+    notes TEXT,
+    recorded_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id),
+    FOREIGN KEY (recorded_by) REFERENCES users(id),
+    INDEX idx_sacrament (sacrament_id)
+);
+
+-- Inventory Audits
+CREATE TABLE IF NOT EXISTS inventory_audits (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sacrament_id INT,
+    actual_quantity INT NOT NULL,
+    notes TEXT,
+    audited_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id),
+    FOREIGN KEY (audited_by) REFERENCES users(id),
+    INDEX idx_sacrament (sacrament_id)
 );
 
 -- -- Insert initial admin user (password: admin123 - change this in production!)

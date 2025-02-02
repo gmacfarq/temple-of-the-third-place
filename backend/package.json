@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest",
+    "test": "jest --detectOpenHandles --forceExit",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.js\""
@@ -44,6 +46,15 @@
     "ext": "js,json",
     "ignore": [
       "src/**/*.test.js"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": ["dotenv/config"],
+    "testMatch": ["**/tests/**/*.test.js"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/server.js"
     ]
   }
 }
