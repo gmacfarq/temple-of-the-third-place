@@ -146,6 +146,46 @@ const getMemberStats = async (req, res) => {
     res.status(500).json({ message: 'Error fetching member statistics' });
   }
 };
+const deleteMember = async (req, res) => {
+  try {
+    // Check authorization first
+    console.log('User role:', req.user.role); // Debug log
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const connection = await pool.getConnection();
+
+    // Debug log
+    console.log('Attempting to delete member:', req.params.id);
+
+    // Then check if member exists
+    const [existingMember] = await connection.query(
+      'SELECT * FROM users WHERE id = ?',
+      [req.params.id]
+    );
+
+    console.log('Found member:', existingMember[0]); // Debug log
+
+    if (existingMember.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    await connection.query(
+      'DELETE FROM users WHERE id = ?',
+      [req.params.id]
+    );
+
+    connection.release();
+    res.json({ message: 'Member deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteMember:', error);
+    res.status(500).json({ message: 'Error deleting member' });
+  }
+};
+
 
 module.exports = {
   getAllMembers,
@@ -153,5 +193,6 @@ module.exports = {
   updateMemberProfile,
   checkInMember,
   updateSubscription,
-  getMemberStats
+  getMemberStats,
+  deleteMember
 };

@@ -8,6 +8,7 @@ const {
   recordAudit
 } = require('../controllers/inventoryController');
 
+
 // POST /api/inventory/transfer - Record inventory transfer
 router.post('/transfer', auth, checkRole(['admin', 'advisor']), recordTransfer);
 

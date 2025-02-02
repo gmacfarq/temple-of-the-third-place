@@ -3,14 +3,47 @@ const pool = require('../config/database');
 const createDonation = async (req, res) => {
   try {
     const { memberId, sacramentId, amount, notes } = req.body;
+
+    // Validation checks
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid donation amount' });
+    }
+
+    if (!memberId || !sacramentId) {
+      return res.status(400).json({ message: 'Member ID and Sacrament ID are required' });
+    }
+
     const connection = await pool.getConnection();
 
+    // Verify member exists
+    const [member] = await connection.query(
+      'SELECT id FROM users WHERE id = ?',
+      [memberId]
+    );
+
+    if (member.length === 0) {
+      connection.release();
+      return res.status(400).json({ message: 'Invalid member ID' });
+    }
+
+    // Verify sacrament exists
+    const [sacrament] = await connection.query(
+      'SELECT id FROM sacraments WHERE id = ?',
+      [sacramentId]
+    );
+
+    if (sacrament.length === 0) {
+      connection.release();
+      return res.status(400).json({ message: 'Invalid sacrament ID' });
+    }
+
+    // Create donation record and get the inserted ID
     const [result] = await connection.query(
       'INSERT INTO donations (member_id, sacrament_id, amount, notes) VALUES (?, ?, ?, ?)',
       [memberId, sacramentId, amount, notes]
     );
-    connection.release();
 
+    connection.release();
     res.status(201).json({
       message: 'Donation recorded successfully',
       donationId: result.insertId

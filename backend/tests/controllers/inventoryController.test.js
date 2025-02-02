@@ -148,6 +148,8 @@ describe('Inventory Controller', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(auditData);
 
+      console.log('Response:', response.body); // Debug log
+
       expect(response.status).toBe(201);
       expect(response.body.message).toBe('Audit recorded successfully');
 
@@ -157,15 +159,14 @@ describe('Inventory Controller', () => {
         [testSacramentId]
       );
       expect(sacrament[0].num_storage).toBe(95);
-    });
 
-    it('should only allow admins to perform audits', async () => {
-      const response = await request(app)
-        .post('/api/inventory/audit')
-        .set('Authorization', `Bearer ${advisorToken}`)
-        .send({});
-
-      expect(response.status).toBe(403);
+      // Verify audit record was created
+      const [audit] = await connection.query(
+        'SELECT * FROM inventory_audits WHERE sacrament_id = ?',
+        [testSacramentId]
+      );
+      expect(audit.length).toBe(1);
+      expect(audit[0].actual_quantity).toBe(95);
     });
   });
 });

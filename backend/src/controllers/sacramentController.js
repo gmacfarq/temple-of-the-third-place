@@ -68,22 +68,55 @@ const updateSacrament = async (req, res) => {
     const { name, type, description, numStorage, numActive, suggestedDonation } = req.body;
     const connection = await pool.getConnection();
 
-    const [existingRecord] = await connection.query(
+    // Check if sacrament exists
+    const [existingSacrament] = await connection.query(
       'SELECT id FROM sacraments WHERE id = ?',
       [req.params.id]
     );
 
-    if (existingRecord.length === 0) {
+    if (existingSacrament.length === 0) {
       connection.release();
       return res.status(404).json({ message: 'Sacrament not found' });
     }
 
-    await connection.query(
-      'UPDATE sacraments SET name = ?, type = ?, description = ?, num_storage = ?, num_active = ?, suggested_donation = ? WHERE id = ?',
-      [name, type, description, numStorage, numActive, suggestedDonation, req.params.id]
-    );
-    connection.release();
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [];
 
+    if (name !== undefined) {
+      updates.push('name = ?');
+      values.push(name);
+    }
+    if (type !== undefined) {
+      updates.push('type = ?');
+      values.push(type);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description);
+    }
+    if (numStorage !== undefined) {
+      updates.push('num_storage = ?');
+      values.push(numStorage);
+    }
+    if (numActive !== undefined) {
+      updates.push('num_active = ?');
+      values.push(numActive);
+    }
+    if (suggestedDonation !== undefined) {
+      updates.push('suggested_donation = ?');
+      values.push(suggestedDonation);
+    }
+
+    // Add the ID to values array
+    values.push(req.params.id);
+
+    await connection.query(
+      `UPDATE sacraments SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    connection.release();
     res.json({ message: 'Sacrament updated successfully' });
   } catch (error) {
     console.error('Error in updateSacrament:', error);

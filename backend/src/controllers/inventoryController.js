@@ -3,40 +3,61 @@ const pool = require('../config/database');
 const recordTransfer = async (req, res) => {
   try {
     const { sacramentId, quantity, type, notes } = req.body;
+
+    if (!sacramentId || !quantity || !type) {
+      return res.status(400).json({ message: 'Sacrament ID, quantity, and type are required' });
+    }
+
     const connection = await pool.getConnection();
+
+    // Verify sacrament exists and get current quantities
+    const [sacrament] = await connection.query(
+      'SELECT id, num_storage, num_active FROM sacraments WHERE id = ?',
+      [sacramentId]
+    );
+
+    if (sacrament.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Sacrament not found' });
+    }
 
     // Start transaction
     await connection.beginTransaction();
 
     try {
       // Record the transfer
-      const [result] = await connection.query(
-        'INSERT INTO inventory_transfers (sacrament_id, quantity, type, notes, recorded_by) VALUES (?, ?, ?, ?, ?)',
-        [sacramentId, quantity, type, notes, req.user.userId]
+      await connection.query(
+        'INSERT INTO inventory_transfers (sacrament_id, quantity, type, notes) VALUES (?, ?, ?, ?)',
+        [sacramentId, quantity, type, notes]
       );
 
-      // Update sacrament quantities based on transfer type
+      // Update quantities based on transfer type
+      let newStorage = sacrament[0].num_storage;
+      let newActive = sacrament[0].num_active;
+
       if (type === 'in') {
-        await connection.query(
-          'UPDATE sacraments SET num_storage = num_storage + ? WHERE id = ?',
-          [quantity, sacramentId]
-        );
+        newStorage += quantity;
       } else if (type === 'out') {
-        await connection.query(
-          'UPDATE sacraments SET num_active = num_active + ?, num_storage = num_storage - ? WHERE id = ?',
-          [quantity, quantity, sacramentId]
-        );
+        if (newStorage < quantity) {
+          throw new Error('Insufficient inventory');
+        }
+        newStorage -= quantity;
+        newActive += quantity;
       }
+
+      // Update sacrament quantities
+      await connection.query(
+        'UPDATE sacraments SET num_storage = ?, num_active = ? WHERE id = ?',
+        [newStorage, newActive, sacramentId]
+      );
 
       await connection.commit();
       connection.release();
 
-      res.status(201).json({
-        message: 'Transfer recorded successfully',
-        transferId: result.insertId
-      });
+      res.status(201).json({ message: 'Transfer recorded successfully' });
     } catch (error) {
       await connection.rollback();
+      connection.release();
       throw error;
     }
   } catch (error) {
@@ -92,27 +113,57 @@ const getInventoryAlerts = async (req, res) => {
 const recordAudit = async (req, res) => {
   try {
     const { sacramentId, actualQuantity, notes } = req.body;
+    console.log('Audit request:', { sacramentId, actualQuantity, notes });
+
+    if (!sacramentId || actualQuantity === undefined) {
+      return res.status(400).json({ message: 'Sacrament ID and actual quantity are required' });
+    }
+
     const connection = await pool.getConnection();
 
-    const [result] = await connection.query(
-      'INSERT INTO inventory_audits (sacrament_id, actual_quantity, notes, audited_by) VALUES (?, ?, ?, ?)',
-      [sacramentId, actualQuantity, notes, req.user.userId]
+    // Verify sacrament exists
+    const [sacrament] = await connection.query(
+      'SELECT id, num_storage FROM sacraments WHERE id = ?',
+      [sacramentId]
     );
 
-    // Update the sacrament's storage quantity to match audit
-    await connection.query(
-      'UPDATE sacraments SET num_storage = ? WHERE id = ?',
-      [actualQuantity, sacramentId]
-    );
+    if (sacrament.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Sacrament not found' });
+    }
 
-    connection.release();
-    res.status(201).json({
-      message: 'Audit recorded successfully',
-      auditId: result.insertId
-    });
+    // Start transaction
+    await connection.beginTransaction();
+
+    try {
+      // Record the audit
+      await connection.query(
+        'INSERT INTO inventory_audits (sacrament_id, actual_quantity, notes, audited_by) VALUES (?, ?, ?, ?)',
+        [sacramentId, actualQuantity, notes, req.user.id]
+      );
+
+      // Update the sacrament's storage quantity
+      await connection.query(
+        'UPDATE sacraments SET num_storage = ? WHERE id = ?',
+        [actualQuantity, sacramentId]
+      );
+
+      await connection.commit();
+      connection.release();
+
+      res.status(201).json({ message: 'Audit recorded successfully' });
+    } catch (error) {
+      console.error('Transaction error:', error);
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
   } catch (error) {
     console.error('Error in recordAudit:', error);
-    res.status(500).json({ message: 'Error recording audit' });
+    res.status(500).json({
+      message: 'Error recording audit',
+      error: process.env.NODE_ENV === 'test' ? error.message : undefined
+    });
   }
 };
 

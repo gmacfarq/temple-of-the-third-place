@@ -7,7 +7,8 @@ const {
   updateMemberProfile,
   checkInMember,
   updateSubscription,
-  getMemberStats
+  getMemberStats,
+  deleteMember
 } = require('../controllers/memberController');
 
 // GET /api/members - List all members (admin only)
@@ -27,5 +28,8 @@ router.put('/:id/checkin', auth, checkInMember);
 
 // PUT /api/members/:id/subscription - Update member subscription (admin only)
 router.put('/:id/subscription', auth, checkRole(['admin']), updateSubscription);
+
+// DELETE /api/members/:id - Delete member (admin only)
+router.delete('/:id', auth, checkRole(['admin']), deleteMember);
 
 module.exports = router;
