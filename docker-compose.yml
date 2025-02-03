@@ -9,6 +9,7 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - PORT = 3000
     depends_on:
       db:
         condition: service_healthy
@@ -32,6 +33,8 @@ services:
       - VITE_API_URL=http://localhost:3000
     depends_on:
       - backend
+    networks:
+      - tottp_network
 
   db:
     image: mysql:8.0

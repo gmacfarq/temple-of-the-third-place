@@ -12,6 +12,7 @@ const donationRoutes = require('./routes/donationRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Security and utility middleware
 app.use(helmet());
@@ -55,7 +56,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Don't start the server if we're testing
-const server = process.env.NODE_ENV === 'test' ? null : app.listen(PORT);
+// Only start the server if we're not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-module.exports = { app, server };
+module.exports = app;
