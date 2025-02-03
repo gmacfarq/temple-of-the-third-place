@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ApiError } from '../types/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -16,23 +17,69 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
+
+interface SubscriptionData {
+  status: 'active' | 'expired' | 'pending';
+  expiryDate: string;
+  type: 'monthly' | 'yearly';
+}
 
 export const auth = {
   login: async (email: string, password: string) => {
     const response = await api.post('/api/auth/login', { email, password });
     return response.data;
   },
+  register: async (data: { firstName: string; lastName: string; email: string }) => {
+    const requestData = {
+      email: data.email.toLowerCase().trim(),
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      password: 'DefaultPass123!'
+    };
+    const response = await api.post('/api/auth/register', requestData);
+    return response.data;
+  },
+  registerPrivileged: async (data: { firstName: string; lastName: string; email: string; role: string }) => {
+    const requestData = {
+      email: data.email.toLowerCase().trim(),
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      password: 'DefaultPass123!',
+      role: data.role
+    };
+    const response = await api.post('/api/auth/register-privileged', requestData);
+    return response.data;
+  }
 };
 
 export const members = {
   getAll: async () => {
-    const response = await api.get('/api/members');
+    const response = await api.get('/api/auth/users');
     return response.data;
   },
   create: async (data: { firstName: string; lastName: string; email: string }) => {
-    const response = await api.post('/api/members', data);
-    return response.data;
+    const requestData = {
+      email: data.email.toLowerCase().trim(),
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      password: 'DefaultPass123!',
+      role: 'member'
+    };
+    console.log('Sending request:', requestData);
+    try {
+      const response = await api.post('/api/auth/register-privileged', requestData);
+      return response.data;
+    } catch (error) {
+      console.error('Registration error:', {
+        status: (error as ApiError).response?.status,
+        data: (error as ApiError).response?.data,
+        message: (error as ApiError).message
+      });
+      throw error;
+    }
   },
   delete: async (id: number) => {
     const response = await api.delete(`/api/members/${id}`);
@@ -42,6 +89,18 @@ export const members = {
     const response = await api.put(`/api/members/${id}`, data);
     return response.data;
   },
+  getStats: async () => {
+    const response = await api.get('/api/members/stats');
+    return response.data;
+  },
+  checkIn: async (id: number) => {
+    const response = await api.put(`/api/members/${id}/checkin`);
+    return response.data;
+  },
+  updateSubscription: async (id: number, data: SubscriptionData) => {
+    const response = await api.put(`/api/members/${id}/subscription`, data);
+    return response.data;
+  }
 };
 
 export const sacraments = {
