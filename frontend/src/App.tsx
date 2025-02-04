@@ -9,6 +9,9 @@ import Members from './components/Members';
 import Sacraments from './components/Sacraments';
 import Donations from './components/Donations';
 import Inventory from './components/Inventory';
+import MemberDetails from './components/Members/MemberDetails';
+import SacramentForm from './components/Sacraments/SacramentForm';
+import SacramentDetail from './components/Sacraments/SacramentDetail';
 
 const queryClient = new QueryClient();
 
@@ -33,7 +36,10 @@ function App() {
                     <Layout>
                       <Routes>
                         <Route path="/members" element={<Members />} />
+                        <Route path="/members/:id" element={<MemberDetails />} />
                         <Route path="/sacraments" element={<Sacraments />} />
+                        <Route path="/sacraments/new" element={<SacramentForm />} />
+                        <Route path="/sacraments/:id" element={<SacramentDetail />} />
                         <Route path="/donations" element={<Donations />} />
                         <Route path="/inventory" element={<Inventory />} />
                         <Route path="/" element={<Navigate to="/members" />} />

@@ -89,6 +89,10 @@ export const members = {
     const response = await api.put(`/api/members/${id}`, data);
     return response.data;
   },
+  getById: async (id: number) => {
+    const response = await api.get(`/api/members/${id}`);
+    return response.data;
+  },
   getStats: async () => {
     const response = await api.get('/api/members/stats');
     return response.data;
@@ -106,6 +110,10 @@ export const members = {
 export const sacraments = {
   getAll: async () => {
     const response = await api.get('/api/sacraments');
+    return response.data;
+  },
+  getById: async (id: number) => {
+    const response = await api.get(`/api/sacraments/${id}`);
     return response.data;
   },
   create: async (data: {

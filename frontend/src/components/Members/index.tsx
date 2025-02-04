@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select } from '@mantine/core';
+import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select, ActionIcon } from '@mantine/core';
 import { members, auth } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../types/api';
+import styles from './Members.module.css';
+import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Member {
   id: number;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
   role: string;
 }
@@ -34,7 +37,7 @@ export default function Members() {
     role: 'member'
   });
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
-
+  const navigate = useNavigate();
   // Fetch members
   const { data: membersList, isLoading } = useQuery({
     queryKey: ['members'],
@@ -73,6 +76,19 @@ export default function Members() {
     addMemberMutation.mutate(formData);
   };
 
+  // Function to cycle through roles
+  const roles = ['member', 'advisor', 'admin'];
+  const cycleRole = (direction: 'up' | 'down') => {
+    const currentIndex = roles.indexOf(formData.role);
+    let newIndex;
+    if (direction === 'up') {
+      newIndex = currentIndex === 0 ? roles.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex === roles.length - 1 ? 0 : currentIndex + 1;
+    }
+    setFormData({ ...formData, role: roles[newIndex] as UserRole });
+  };
+
   // Only render if user is admin
   if (user?.role !== 'admin') {
     return <Text>You don't have permission to view this page.</Text>;
@@ -106,6 +122,7 @@ export default function Members() {
               required
             />
             <Select
+              className={styles.selectWrapper}
               label="Role"
               value={formData.role}
               onChange={(value) => setFormData({ ...formData, role: value as UserRole })}
@@ -115,6 +132,20 @@ export default function Members() {
                 { value: 'admin', label: 'Admin' }
               ]}
               required
+              defaultValue="member"
+              rightSectionWidth={80}
+              rightSection={
+                <Group gap={0}>
+                  <ActionIcon onClick={(e) => { e.stopPropagation(); cycleRole('up'); }}>
+                    <IconChevronUp size={24} />
+                  </ActionIcon>
+                  <ActionIcon onClick={(e) => { e.stopPropagation(); cycleRole('down'); }}>
+                    <IconChevronDown size={24} />
+                  </ActionIcon>
+                </Group>
+              }
+              styles={{ input: { cursor: 'default' } }}
+              readOnly
             />
             <Button type="submit" loading={addMemberMutation.isPending}>
               Add Member
@@ -128,6 +159,7 @@ export default function Members() {
         <Group justify="apart" mb="md">
           <Text size="xl">Members</Text>
           <Select
+            className={styles.selectWrapper}
             placeholder="Filter by role"
             value={roleFilter}
             onChange={setRoleFilter}
@@ -146,22 +178,22 @@ export default function Members() {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredMembers?.map((member: Member) => (
               <tr key={member.id}>
-                <td>{member.firstName} {member.lastName}</td>
+                <td>{member.first_name} {member.last_name}</td>
                 <td>{member.email}</td>
                 <td>{member.role}</td>
                 <td>
                   <Group>
-                    <Button size="xs" variant="outline">
-                      Edit
-                    </Button>
-                    <Button size="xs" color="red" variant="outline">
-                      Delete
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => navigate(`/members/${member.id}`)}
+                    >
+                      View
                     </Button>
                   </Group>
                 </td>

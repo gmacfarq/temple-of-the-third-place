@@ -18,7 +18,7 @@ const getMemberById = async (req, res) => {
   try {
     const connection = await pool.getConnection();
     const [member] = await connection.query(
-      'SELECT id, email, first_name, last_name, role, subscription_status, last_check_in FROM users WHERE id = ? AND role = "member"',
+      'SELECT id, email, first_name, last_name, role, subscription_status, last_check_in FROM users WHERE id = ?',
       [req.params.id]
     );
     connection.release();

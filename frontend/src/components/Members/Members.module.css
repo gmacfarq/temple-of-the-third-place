@@ -1,0 +1,22 @@
+.selectWrapper {
+  position: relative;
+}
+
+.selectWrapper :global(.m_2943220b),
+.selectWrapper :global(.mantine-ComboboxChevron-chevron) {
+  display: none !important;
+}
+
+.selectWrapper :global(.mantine-InputClearButton-root) {
+  width: 3rem !important;
+  height: 3rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.selectWrapper :global(.mantine-InputClearButton-root) svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
