@@ -32,11 +32,12 @@ async function initTestDatabase() {
         last_check_in TIMESTAMP NULL,
         INDEX idx_email (email)
       );
-
+      
       CREATE TABLE IF NOT EXISTS sacraments (
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,
         type VARCHAR(100) NOT NULL,
+        strain VARCHAR(100),
         description TEXT,
         num_storage INT DEFAULT 0,
         num_active INT DEFAULT 0,
@@ -45,6 +46,7 @@ async function initTestDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_batch (batch_id)
       );
+
 
       CREATE TABLE IF NOT EXISTS donations (
         id INT PRIMARY KEY AUTO_INCREMENT,

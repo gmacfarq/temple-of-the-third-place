@@ -9,14 +9,20 @@ import {
   Title,
   Select,
   Textarea,
-  Stack
+  Stack,
+  ActionIcon
 } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { sacraments } from '../../services/api';
+import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
+import styles from '../Members/Members.module.css'; // You might want to move this to a shared location
+
+type SacramentType = 'chocolate' | 'dried_fruit' | 'capsule' | 'gummy' | 'psily_tart' | 'tincture' | 'other';
 
 interface SacramentFormData {
   name: string;
-  type: string;
+  type: SacramentType;
+  strain: string;
   description: string;
   numStorage: number;
   suggestedDonation: number;
@@ -27,7 +33,8 @@ export default function SacramentForm() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<SacramentFormData>({
     name: '',
-    type: '',
+    type: 'chocolate',
+    strain: '',
     description: '',
     numStorage: 0,
     suggestedDonation: 0,
@@ -40,6 +47,19 @@ export default function SacramentForm() {
       navigate('/sacraments');
     },
   });
+
+  const types: SacramentType[] = ['chocolate', 'dried_fruit', 'capsule', 'gummy', 'psily_tart', 'tincture', 'other'];
+
+  const cycleType = (direction: 'up' | 'down') => {
+    const currentIndex = types.indexOf(formData.type);
+    let newIndex;
+    if (direction === 'up') {
+      newIndex = currentIndex === 0 ? types.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex === types.length - 1 ? 0 : currentIndex + 1;
+    }
+    setFormData({ ...formData, type: types[newIndex] });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +81,10 @@ export default function SacramentForm() {
             />
 
             <Select
+              className={styles.selectWrapper}
               label="Type"
               value={formData.type}
-              onChange={(value) => setFormData({ ...formData, type: value || '' })}
+              onChange={(value) => setFormData({ ...formData, type: value as SacramentType })}
               data={[
                 { value: 'chocolate', label: 'Chocolate' },
                 { value: 'dried_fruit', label: 'Dried Fruit' },
@@ -74,6 +95,25 @@ export default function SacramentForm() {
                 { value: 'other', label: 'Other' }
               ]}
               required
+              rightSectionWidth={80}
+              rightSection={
+                <Group gap={0}>
+                  <ActionIcon onClick={(e) => { e.stopPropagation(); cycleType('up'); }}>
+                    <IconChevronUp size={24} />
+                  </ActionIcon>
+                  <ActionIcon onClick={(e) => { e.stopPropagation(); cycleType('down'); }}>
+                    <IconChevronDown size={24} />
+                  </ActionIcon>
+                </Group>
+              }
+              styles={{ input: { cursor: 'default' } }}
+              readOnly
+            />
+
+            <TextInput
+              label="Strain"
+              value={formData.strain}
+              onChange={(e) => setFormData({ ...formData, strain: e.target.value })}
             />
 
             <Textarea

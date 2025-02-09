@@ -17,6 +17,7 @@ interface Sacrament {
   id: number;
   name: string;
   type: string;
+  strain: string;
   description: string;
   num_storage: number;
   num_active: number;
@@ -83,6 +84,7 @@ export default function SacramentDetail() {
 
           <Stack gap="xs">
             <Text size="lg"><strong>Type:</strong> {sacrament.type}</Text>
+            <Text size="lg"><strong>Strain:</strong> {sacrament.strain}</Text>
             <Text size="lg"><strong>Description:</strong> {sacrament.description}</Text>
             <Text size="lg"><strong>Storage Quantity:</strong> {sacrament.num_storage}</Text>
             <Text size="lg"><strong>Active Quantity:</strong> {sacrament.num_active}</Text>

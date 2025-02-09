@@ -14,6 +14,7 @@ interface Sacrament {
   id: number;
   name: string;
   type: string;
+  strain: string;
   description: string;
   num_storage: number;
   num_active: number;
@@ -52,6 +53,7 @@ export default function Sacraments() {
             <tr>
               <th>Name</th>
               <th>Type</th>
+              <th>Strain</th>
               <th>Description</th>
               <th>Storage</th>
               <th>Active</th>
@@ -64,6 +66,7 @@ export default function Sacraments() {
               <tr key={sacrament.id}>
                 <td>{sacrament.name}</td>
                 <td>{sacrament.type}</td>
+                <td>{sacrament.strain}</td>
                 <td>{sacrament.description}</td>
                 <td>{sacrament.num_storage}</td>
                 <td>{sacrament.num_active}</td>

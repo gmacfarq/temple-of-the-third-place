@@ -1,5 +1,8 @@
 .selectWrapper {
   position: relative;
+  & :global(.mantine-Select-chevron) {
+    display: none;
+  }
 }
 
 .selectWrapper :global(.m_2943220b),

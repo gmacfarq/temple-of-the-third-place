@@ -119,6 +119,7 @@ export const sacraments = {
   create: async (data: {
     name: string;
     type: string;
+    strain: string;
     description: string;
     numStorage: number;
     suggestedDonation: number;
@@ -133,6 +134,7 @@ export const sacraments = {
   update: async (id: number, data: {
     name?: string;
     type?: string;
+    strain?: string;
     description?: string;
     numStorage?: number;
     suggestedDonation?: number;

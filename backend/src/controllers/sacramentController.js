@@ -7,7 +7,7 @@ const getAllSacraments = async (req, res) => {
     console.log('Database connection established');
 
     const [sacraments] = await connection.query(
-      'SELECT id, name, type, description, num_storage, num_active, suggested_donation FROM sacraments'
+      'SELECT id, name, type, strain, description, num_storage, num_active, suggested_donation FROM sacraments'
     );
     console.log('Query executed, results:', sacraments);
 
@@ -44,12 +44,12 @@ const getSacramentById = async (req, res) => {
 
 const createSacrament = async (req, res) => {
   try {
-    const { name, type, description, numStorage, suggestedDonation, batchId } = req.body;
+    const { name, type, strain, description, numStorage, suggestedDonation, batchId } = req.body;
     const connection = await pool.getConnection();
 
     const [result] = await connection.query(
-      'INSERT INTO sacraments (name, type, description, num_storage, suggested_donation, batch_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, type, description, numStorage, suggestedDonation, batchId]
+      'INSERT INTO sacraments (name, type, strain, description, num_storage, suggested_donation, batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, type, strain, description, numStorage, suggestedDonation, batchId]
     );
     connection.release();
 
