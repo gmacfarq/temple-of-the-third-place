@@ -106,7 +106,7 @@ export const members = {
     return response.data;
   },
   deleteCheckIn: async (checkInId: number) => {
-    const response = await api.delete(`/api/check-ins/${checkInId}`);
+    const response = await api.delete(`/api/members/check-ins/${checkInId}`);
     return response.data;
   },
   updateSubscription: async (id: number, data: SubscriptionData) => {

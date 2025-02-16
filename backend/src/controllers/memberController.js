@@ -146,6 +146,7 @@ const getMemberStats = async (req, res) => {
     res.status(500).json({ message: 'Error fetching member statistics' });
   }
 };
+
 const deleteMember = async (req, res) => {
   try {
     // Check authorization first
@@ -186,6 +187,85 @@ const deleteMember = async (req, res) => {
   }
 };
 
+const getCheckIns = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const perPage = parseInt(req.query.per_page) || 5;
+    const offset = (page - 1) * perPage;
+
+    const connection = await pool.getConnection();
+
+    const [checkIns] = await connection.query(
+      'SELECT id, timestamp FROM check_ins WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+      [id, perPage, offset]
+    );
+
+    const [total] = await connection.query(
+      'SELECT COUNT(*) as count FROM check_ins WHERE user_id = ?',
+      [id]
+    );
+
+    connection.release();
+
+    res.json({
+      data: checkIns,
+      total: total[0].count,
+      totalCheckIns: total[0].count
+    });
+  } catch (error) {
+    console.error('Error in getCheckIns:', error);
+    res.status(500).json({ message: 'Error fetching check-ins' });
+  }
+};
+
+const checkIn = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+
+    // Check if user has already checked in today
+    const [existingCheckIn] = await connection.query(
+      'SELECT id FROM check_ins WHERE user_id = ? AND DATE(timestamp) = CURDATE()',
+      [id]
+    );
+
+    if (existingCheckIn.length > 0) {
+      connection.release();
+      return res.status(400).json({ message: 'User has already checked in today' });
+    }
+
+    // Create new check-in if no existing check-in today
+    const [result] = await connection.query(
+      'INSERT INTO check_ins (user_id) VALUES (?)',
+      [id]
+    );
+
+    connection.release();
+    res.json({ message: 'Check-in recorded successfully' });
+  } catch (error) {
+    console.error('Error in checkIn:', error);
+    res.status(500).json({ message: 'Error recording check-in' });
+  }
+};
+
+const deleteCheckIn = async (req, res) => {
+  try {
+    const { checkInId } = req.params;
+    const connection = await pool.getConnection();
+
+    await connection.query(
+      'DELETE FROM check_ins WHERE id = ?',
+      [checkInId]
+    );
+
+    connection.release();
+    res.json({ message: 'Check-in deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteCheckIn:', error);
+    res.status(500).json({ message: 'Error deleting check-in' });
+  }
+};
 
 module.exports = {
   getAllMembers,
@@ -194,5 +274,8 @@ module.exports = {
   checkInMember,
   updateSubscription,
   getMemberStats,
-  deleteMember
+  deleteMember,
+  getCheckIns,
+  checkIn,
+  deleteCheckIn
 };

@@ -13,7 +13,7 @@ interface EditableFields {
 
 interface CheckIn {
   id: number;
-  created_at: string;
+  timestamp: string;
 }
 
 export default function MemberDetails() {
@@ -32,7 +32,8 @@ export default function MemberDetails() {
 
   const { data: checkIns } = useQuery({
     queryKey: ['member-checkins', id, page],
-    queryFn: () => members.getCheckIns(Number(id), page, perPage)
+    queryFn: () => members.getCheckIns(Number(id), page, perPage),
+    staleTime: 0, // Disable caching temporarily for testing
   });
 
   const updateMutation = useMutation({
@@ -53,6 +54,13 @@ export default function MemberDetails() {
     mutationFn: members.delete,
     onSuccess: () => {
       navigate('/members');
+    }
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: () => members.checkIn(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member-checkins', id] });
     }
   });
 
@@ -95,13 +103,18 @@ export default function MemberDetails() {
 
   return (
     <Paper p="md">
-      <Group justify="apart" mb="xl">
+      <Group justify="space-between" mb="xl">
         <Text size="xl">Member Details</Text>
         <Group>
           <Button
             variant="outline"
-            onClick={handleEdit}
+            color="green"
+            onClick={() => checkInMutation.mutate()}
+            loading={checkInMutation.isPending}
           >
+            Check In
+          </Button>
+          <Button variant="outline" onClick={handleEdit}>
             {isEditing ? 'Cancel' : 'Edit'}
           </Button>
           <Button
@@ -157,42 +170,49 @@ export default function MemberDetails() {
         )}
       </Stack>
 
-      <Text size="xl" mt="xl" mb="md">Recent Check-ins</Text>
-      <Table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {checkIns?.data.map((checkIn: CheckIn) => (
-            <tr key={checkIn.id}>
-              <td>{new Date(checkIn.created_at).toLocaleDateString()}</td>
-              <td>{new Date(checkIn.created_at).toLocaleTimeString()}</td>
-              <td>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  color="red"
-                  onClick={() => deleteCheckInMutation.mutate(checkIn.id)}
-                  loading={deleteCheckInMutation.isPending}
-                >
-                  <IconX size={16} />
-                </Button>
-              </td>
+      <Stack mt="xl">
+        <Group justify="space-between">
+          <Text size="xl">Recent Check-ins</Text>
+          <Text size="md">Total Check-ins: {checkIns?.totalCheckIns || 0}</Text>
+        </Group>
+
+        <Table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
-      <Group justify="center" mt="md">
-        <Pagination
-          value={page}
-          onChange={setPage}
-          total={Math.ceil((checkIns?.total || 0) / perPage)}
-        />
-      </Group>
+          </thead>
+          <tbody>
+            {checkIns?.data.map((checkIn: CheckIn) => (
+              <tr key={checkIn.id}>
+                <td>{new Date(checkIn.timestamp).toLocaleDateString()}</td>
+                <td>{new Date(checkIn.timestamp).toLocaleTimeString()}</td>
+                <td>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    onClick={() => deleteCheckInMutation.mutate(checkIn.id)}
+                    loading={deleteCheckInMutation.isPending}
+                  >
+                    <IconX size={16} />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+
+        <Group justify="center">
+          <Pagination
+            value={page}
+            onChange={setPage}
+            total={Math.ceil((checkIns?.total || 0) / perPage)}
+          />
+        </Group>
+      </Stack>
     </Paper>
   );
 }

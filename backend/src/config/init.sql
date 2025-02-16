@@ -34,12 +34,8 @@ CREATE TABLE IF NOT EXISTS sacraments (
 CREATE TABLE IF NOT EXISTS check_ins (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    status ENUM('waiting', 'in_progress', 'completed') DEFAULT 'waiting',
-    check_in_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    check_out_time TIMESTAMP,
-    notes TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_status (status)
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Donations

@@ -8,7 +8,10 @@ const {
   checkInMember,
   updateSubscription,
   getMemberStats,
-  deleteMember
+  deleteMember,
+  getCheckIns,
+  checkIn,
+  deleteCheckIn
 } = require('../controllers/memberController');
 
 // GET /api/members - List all members (admin only)
@@ -24,12 +27,18 @@ router.get('/:id', auth, getMemberById);
 router.put('/:id', auth, updateMemberProfile);
 
 // PUT /api/members/:id/checkin - Update member check-in
-router.put('/:id/checkin', auth, checkInMember);
+router.put('/:id/checkin', auth, checkIn);
 
 // PUT /api/members/:id/subscription - Update member subscription (admin only)
 router.put('/:id/subscription', auth, checkRole(['admin']), updateSubscription);
 
 // DELETE /api/members/:id - Delete member (admin only)
 router.delete('/:id', auth, checkRole(['admin']), deleteMember);
+
+// GET /api/members/:id/checkins - Get member check-ins
+router.get('/:id/checkins', auth, getCheckIns);
+
+// DELETE /api/members/check-ins/:checkInId - Delete a specific check-in
+router.delete('/check-ins/:checkInId', auth, deleteCheckIn);
 
 module.exports = router;
