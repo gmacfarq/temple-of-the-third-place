@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -15,45 +15,35 @@ import SacramentDetail from './components/Sacraments/SacramentDetail';
 
 const queryClient = new QueryClient();
 
-// Protected Route component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
 }
 
-function App() {
+export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <MantineProvider>
-        <AuthProvider>
-          <Router>
+    <Router>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <MantineProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                        <Route path="/members" element={<Members />} />
-                        <Route path="/members/:id" element={<MemberDetails />} />
-                        <Route path="/sacraments" element={<Sacraments />} />
-                        <Route path="/sacraments/new" element={<SacramentForm />} />
-                        <Route path="/sacraments/:id" element={<SacramentDetail />} />
-                        <Route path="/donations" element={<Donations />} />
-                        <Route path="/inventory" element={<Inventory />} />
-                        <Route path="/" element={<Navigate to="/members" />} />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  <Route path="/members" element={<Members />} />
+                  <Route path="/members/:id" element={<MemberDetails />} />
+                  <Route path="/sacraments" element={<Sacraments />} />
+                  <Route path="/sacraments/new" element={<SacramentForm />} />
+                  <Route path="/sacraments/:id" element={<SacramentDetail />} />
+                  <Route path="/donations" element={<Donations />} />
+                  <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/" element={<Navigate to="/members" />} />
+                </Route>
+              </Route>
             </Routes>
-          </Router>
-        </AuthProvider>
-      </MantineProvider>
-    </QueryClientProvider>
+          </MantineProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </Router>
   );
 }
-
-export default App;

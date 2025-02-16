@@ -101,6 +101,14 @@ export const members = {
     const response = await api.put(`/api/members/${id}/checkin`);
     return response.data;
   },
+  getCheckIns: async (id: number, page: number, perPage: number) => {
+    const response = await api.get(`/api/members/${id}/checkins?page=${page}&per_page=${perPage}`);
+    return response.data;
+  },
+  deleteCheckIn: async (checkInId: number) => {
+    const response = await api.delete(`/api/check-ins/${checkInId}`);
+    return response.data;
+  },
   updateSubscription: async (id: number, data: SubscriptionData) => {
     const response = await api.put(`/api/members/${id}/subscription`, data);
     return response.data;

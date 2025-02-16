@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { TextInput, Button, Group, Paper, Text, LoadingOverlay, Stack } from '@mantine/core';
+import { TextInput, Button, Group, Paper, Text, LoadingOverlay, Stack, Table, Pagination } from '@mantine/core';
+import { IconX } from '@tabler/icons-react';
 import { members } from '../../services/api';
 
 interface EditableFields {
@@ -10,16 +11,28 @@ interface EditableFields {
   email: string;
 }
 
+interface CheckIn {
+  id: number;
+  created_at: string;
+}
+
 export default function MemberDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedFields, setEditedFields] = useState<EditableFields | null>(null);
+  const [page, setPage] = useState(1);
+  const perPage = 5;
 
   const { data: member, isLoading } = useQuery({
     queryKey: ['member', id],
     queryFn: () => members.getById(Number(id))
+  });
+
+  const { data: checkIns } = useQuery({
+    queryKey: ['member-checkins', id, page],
+    queryFn: () => members.getCheckIns(Number(id), page, perPage)
   });
 
   const updateMutation = useMutation({
@@ -40,6 +53,13 @@ export default function MemberDetails() {
     mutationFn: members.delete,
     onSuccess: () => {
       navigate('/members');
+    }
+  });
+
+  const deleteCheckInMutation = useMutation({
+    mutationFn: members.deleteCheckIn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member-checkins', id] });
     }
   });
 
@@ -136,6 +156,43 @@ export default function MemberDetails() {
           </Group>
         )}
       </Stack>
+
+      <Text size="xl" mt="xl" mb="md">Recent Check-ins</Text>
+      <Table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {checkIns?.data.map((checkIn: CheckIn) => (
+            <tr key={checkIn.id}>
+              <td>{new Date(checkIn.created_at).toLocaleDateString()}</td>
+              <td>{new Date(checkIn.created_at).toLocaleTimeString()}</td>
+              <td>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => deleteCheckInMutation.mutate(checkIn.id)}
+                  loading={deleteCheckInMutation.isPending}
+                >
+                  <IconX size={16} />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+      <Group justify="center" mt="md">
+        <Pagination
+          value={page}
+          onChange={setPage}
+          total={Math.ceil((checkIns?.total || 0) / perPage)}
+        />
+      </Group>
     </Paper>
   );
 }

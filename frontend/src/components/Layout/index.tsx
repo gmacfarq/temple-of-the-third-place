@@ -1,12 +1,12 @@
-import { AppShell, Text, Button, Group } from '@mantine/core';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { AppShell, Button, Group, Text } from '@mantine/core';
 import { useAuth } from '../../hooks/useAuth';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -46,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
       </AppShell.Navbar>
 
       <AppShell.Main>
-        {children}
+        <Outlet />
       </AppShell.Main>
     </AppShell>
   );

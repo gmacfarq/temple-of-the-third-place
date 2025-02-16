@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS inventory_transfers (
     notes TEXT,
     recorded_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id),
+    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id) ON DELETE CASCADE,
     FOREIGN KEY (recorded_by) REFERENCES users(id),
     INDEX idx_sacrament (sacrament_id)
 );
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS inventory_audits (
     notes TEXT,
     audited_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id),
+    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id) ON DELETE CASCADE,
     FOREIGN KEY (audited_by) REFERENCES users(id),
     INDEX idx_sacrament (sacrament_id)
 );

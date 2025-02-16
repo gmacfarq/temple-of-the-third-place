@@ -65,7 +65,7 @@ const createSacrament = async (req, res) => {
 
 const updateSacrament = async (req, res) => {
   try {
-    const { name, type, description, numStorage, numActive, suggestedDonation } = req.body;
+    const { name, type, strain, description, suggestedDonation } = req.body;
     const connection = await pool.getConnection();
 
     // Check if sacrament exists
@@ -91,24 +91,19 @@ const updateSacrament = async (req, res) => {
       updates.push('type = ?');
       values.push(type);
     }
+    if (strain !== undefined) {
+      updates.push('strain = ?');
+      values.push(strain);
+    }
     if (description !== undefined) {
       updates.push('description = ?');
       values.push(description);
-    }
-    if (numStorage !== undefined) {
-      updates.push('num_storage = ?');
-      values.push(numStorage);
-    }
-    if (numActive !== undefined) {
-      updates.push('num_active = ?');
-      values.push(numActive);
     }
     if (suggestedDonation !== undefined) {
       updates.push('suggested_donation = ?');
       values.push(suggestedDonation);
     }
 
-    // Add the ID to values array
     values.push(req.params.id);
 
     await connection.query(

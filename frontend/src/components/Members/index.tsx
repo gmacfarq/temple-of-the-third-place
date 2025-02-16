@@ -7,6 +7,7 @@ import { ApiError } from '../../types/api';
 import styles from './Members.module.css';
 import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import MemberSearch from '../Members/MemberSearch';
 
 interface Member {
   id: number;
@@ -36,18 +37,13 @@ export default function Members() {
     email: '',
     role: 'member'
   });
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
   // Fetch members
   const { data: membersList, isLoading } = useQuery({
     queryKey: ['members'],
     queryFn: members.getAll
   });
-
-  // Filter members based on selected role
-  const filteredMembers = membersList?.filter((member: Member) =>
-    !roleFilter || member.role === roleFilter
-  );
 
   // Add member mutation
   const addMemberMutation = useMutation({
@@ -68,6 +64,13 @@ export default function Members() {
         response: error.response?.data
       });
       // Add error notification here
+    }
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: members.checkIn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
     }
   });
 
@@ -154,23 +157,16 @@ export default function Members() {
         </form>
       </Paper>
 
+      {/* Search Component */}
+      <MemberSearch
+        members={membersList || []}
+        onFilteredMembersChange={setFilteredMembers}
+      />
+
       {/* Members List */}
       <Paper shadow="xs" p="md">
         <Group justify="apart" mb="md">
           <Text size="xl">Members</Text>
-          <Select
-            className={styles.selectWrapper}
-            placeholder="Filter by role"
-            value={roleFilter}
-            onChange={setRoleFilter}
-            data={[
-              { value: '', label: 'All' },
-              { value: 'member', label: 'Members' },
-              { value: 'advisor', label: 'Advisors' },
-              { value: 'admin', label: 'Admins' }
-            ]}
-            clearable
-          />
         </Group>
         <Table>
           <thead>
@@ -178,10 +174,11 @@ export default function Members() {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredMembers?.map((member: Member) => (
+            {filteredMembers.map((member: Member) => (
               <tr key={member.id}>
                 <td>{member.first_name} {member.last_name}</td>
                 <td>{member.email}</td>
@@ -194,6 +191,15 @@ export default function Members() {
                       onClick={() => navigate(`/members/${member.id}`)}
                     >
                       View
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="green"
+                      onClick={() => checkInMutation.mutate(member.id)}
+                      loading={checkInMutation.isPending}
+                    >
+                      Check In
                     </Button>
                   </Group>
                 </td>
