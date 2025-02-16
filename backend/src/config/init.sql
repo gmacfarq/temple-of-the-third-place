@@ -39,17 +39,25 @@ CREATE TABLE IF NOT EXISTS check_ins (
 );
 
 -- Donations
-CREATE TABLE IF NOT EXISTS donations (
+CREATE TABLE donations (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    member_id INT,
-    sacrament_id INT,
-    amount DECIMAL(10,2) NOT NULL,
+    member_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (member_id) REFERENCES users(id),
-    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id),
-    INDEX idx_member (member_id),
-    INDEX idx_sacrament (sacrament_id)
+    FOREIGN KEY (member_id) REFERENCES users(id)
+);
+
+-- Donation Items
+CREATE TABLE donation_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    donation_id INT NOT NULL,
+    sacrament_id INT NOT NULL,
+    quantity INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (donation_id) REFERENCES donations(id),
+    FOREIGN KEY (sacrament_id) REFERENCES sacraments(id)
 );
 
 -- Inventory Transfers

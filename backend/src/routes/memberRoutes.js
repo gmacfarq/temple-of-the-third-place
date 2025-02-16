@@ -11,14 +11,18 @@ const {
   deleteMember,
   getCheckIns,
   checkIn,
-  deleteCheckIn
+  deleteCheckIn,
+  getRecentCheckIns
 } = require('../controllers/memberController');
 
-// GET /api/members - List all members (admin only)
-router.get('/', auth, checkRole(['admin']), getAllMembers);
+// Place this BEFORE any routes with :id parameter
+router.get('/recent-checkins', auth, checkRole(['admin']), getRecentCheckIns);
 
-// GET /api/members/stats - Get membership statistics (admin only)
+// GET /api/members/stats
 router.get('/stats', auth, checkRole(['admin']), getMemberStats);
+
+// GET /api/members
+router.get('/', auth, checkRole(['admin']), getAllMembers);
 
 // GET /api/members/:id - Get member profile
 router.get('/:id', auth, getMemberById);

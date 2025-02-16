@@ -267,6 +267,29 @@ const deleteCheckIn = async (req, res) => {
   }
 };
 
+const getRecentCheckIns = async (req, res) => {
+  try {
+    const [recentCheckIns] = await pool.query(`
+      SELECT DISTINCT
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        c.timestamp as last_check_in
+      FROM users u
+      JOIN check_ins c ON u.id = c.user_id
+      WHERE c.timestamp >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      ORDER BY c.timestamp DESC
+      LIMIT 10
+    `);
+
+    res.json(recentCheckIns);
+  } catch (error) {
+    console.error('Error fetching recent check-ins:', error);
+    res.status(500).json({ message: 'Error fetching recent check-ins' });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -277,5 +300,6 @@ module.exports = {
   deleteMember,
   getCheckIns,
   checkIn,
-  deleteCheckIn
+  deleteCheckIn,
+  getRecentCheckIns
 };

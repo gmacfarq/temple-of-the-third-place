@@ -112,7 +112,11 @@ export const members = {
   updateSubscription: async (id: number, data: SubscriptionData) => {
     const response = await api.put(`/api/members/${id}/subscription`, data);
     return response.data;
-  }
+  },
+  getRecentCheckIns: async () => {
+    const response = await api.get('/api/members/recent-checkins');
+    return response.data;
+  },
 };
 
 export const sacraments = {
@@ -159,8 +163,12 @@ export const donations = {
   },
   create: async (data: {
     memberId: number;
-    sacramentId: number;
-    amount: number;
+    type: string;
+    items: Array<{
+      sacramentId: number;
+      quantity: number;
+      amount: number;
+    }>;
     notes?: string;
   }) => {
     const response = await api.post('/api/donations', data);
