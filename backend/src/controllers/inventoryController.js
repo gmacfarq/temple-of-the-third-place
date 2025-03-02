@@ -167,9 +167,31 @@ const recordAudit = async (req, res) => {
   }
 };
 
+const getInventoryAudits = async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    const [audits] = await connection.query(`
+      SELECT
+        ia.*,
+        s.name as sacrament_name,
+        CONCAT(u.first_name, ' ', u.last_name) as audited_by_name
+      FROM inventory_audits ia
+      LEFT JOIN sacraments s ON ia.sacrament_id = s.id
+      LEFT JOIN users u ON ia.audited_by = u.id
+      ORDER BY ia.created_at DESC
+    `);
+    connection.release();
+    res.json(audits);
+  } catch (error) {
+    console.error('Error in getInventoryAudits:', error);
+    res.status(500).json({ message: 'Error fetching inventory audits' });
+  }
+};
+
 module.exports = {
   recordTransfer,
   getInventoryHistory,
   getInventoryAlerts,
-  recordAudit
+  recordAudit,
+  getInventoryAudits
 };

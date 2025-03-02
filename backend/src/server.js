@@ -1,7 +1,5 @@
 const { app, server } = require('./app');
 const pool = require('./config/database');
-const seedAdmin = require('./config/seedAdmin');
-const seedTestData = require('./config/seedTestData');
 
 async function startServer() {
   try {
@@ -11,12 +9,8 @@ async function startServer() {
     console.log('Database connection successful');
     connection.release();
 
-    // Seed data
-    await seedAdmin();
-    await seedTestData();
-
   } catch (error) {
-    console.error('Database connection or seeding failed:', error);
+    console.error('Database connection failed:', error);
     process.exit(1);
   }
 }

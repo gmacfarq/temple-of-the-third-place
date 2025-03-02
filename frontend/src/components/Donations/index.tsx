@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, Button, Group, Paper, Text, LoadingOverlay } from '@mantine/core';
 import { donations } from '../../services/api';
 import DonationForm from './DonationForm';
+import { useEffect } from 'react';
 
 interface Donation {
   id: number;
@@ -17,11 +18,14 @@ interface Donation {
 export default function Donations() {
   const { data: donationsList, isLoading, error } = useQuery({
     queryKey: ['donations'],
-    queryFn: donations.getAll,
-    onError: (err) => {
-      console.error('Error fetching donations:', err);
-    }
+    queryFn: donations.getAll
   });
+
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching donations:', error);
+    }
+  }, [error]);
 
   if (error) {
     return <Text color="red">Error loading donations: {(error as Error).message}</Text>;

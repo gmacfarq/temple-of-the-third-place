@@ -51,12 +51,19 @@ const sacraments = [
 async function seedSacraments() {
   const connection = await pool.getConnection();
   try {
+    // Check if sacraments already exist
+    const [existingSacraments] = await connection.query('SELECT COUNT(*) as count FROM sacraments');
+
+    if (existingSacraments[0].count > 0) {
+      console.log('Sacraments already exist, skipping seed');
+      return;
+    }
+
     for (const sacrament of sacraments) {
       await connection.query(`
         INSERT INTO sacraments
         (name, type, strain, description, num_storage, num_active, suggested_donation)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE name = name
       `, [
         sacrament.name,
         sacrament.type,

@@ -5,7 +5,8 @@ const {
   recordTransfer,
   getInventoryHistory,
   getInventoryAlerts,
-  recordAudit
+  recordAudit,
+  getInventoryAudits
 } = require('../controllers/inventoryController');
 
 
@@ -20,5 +21,8 @@ router.get('/alerts', auth, checkRole(['admin', 'advisor']), getInventoryAlerts)
 
 // POST /api/inventory/audit - Record inventory audit
 router.post('/audit', auth, checkRole(['admin']), recordAudit);
+
+// GET /api/inventory/audits - Get audit history
+router.get('/audits', auth, checkRole(['admin']), getInventoryAudits);
 
 module.exports = router;
