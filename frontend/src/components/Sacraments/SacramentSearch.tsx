@@ -61,7 +61,6 @@ export default function SacramentSearch({ onSelect }: SacramentSearchProps) {
             { value: 'other', label: 'Other' }
           ]}
           clearable
-          className={styles.selectWrapper}
           readOnly
           rightSection={
             <Group gap={0}>

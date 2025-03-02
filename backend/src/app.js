@@ -56,6 +56,20 @@ app.use((err, req, res, next) => {
   });
 });
 
+const seedDatabase = require('./config/seed');
+
+// After all middleware and routes are set up
+(async () => {
+  try {
+    const isDev = process.env.NODE_ENV === 'development';
+    await seedDatabase(isDev);
+    console.log('Database initialization complete');
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    process.exit(1);
+  }
+})();
+
 // Only start the server if we're not in test mode
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {

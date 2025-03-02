@@ -21,6 +21,17 @@ interface Sacrament {
   suggested_donation: string;
 }
 
+interface DonationSubmission {
+  memberId: number;
+  type: string;
+  items: {
+    sacramentId: number;
+    quantity: number;
+    amount: number;
+  }[];
+  notes?: string;
+}
+
 export default function DonationForm() {
   const queryClient = useQueryClient();
   const [donationType, setDonationType] = useState<DonationType>('cash');
@@ -74,6 +85,24 @@ export default function DonationForm() {
     return donationItems.reduce((total, item) =>
       total + (item.quantity * item.suggestedDonation), 0
     );
+  };
+
+  const handleSubmit = () => {
+    if (!selectedMemberId || donationItems.length === 0) return;
+
+    const submission: DonationSubmission = {
+      memberId: selectedMemberId,
+      type: donationType,
+      items: donationItems.map(item => ({
+        sacramentId: item.sacramentId,
+        quantity: item.quantity,
+        amount: item.quantity * item.suggestedDonation
+      })),
+      notes: `${donationType} payment`
+    };
+
+    console.log('Submitting donation:', submission); // Debug log
+    addDonationMutation.mutate(submission);
   };
 
   return (
@@ -144,18 +173,9 @@ export default function DonationForm() {
 
             <Button
               fullWidth
-              onClick={() => addDonationMutation.mutate({
-                memberId: selectedMemberId!,
-                type: donationType,
-                items: donationItems.map(item => ({
-                  sacramentId: item.sacramentId,
-                  quantity: item.quantity,
-                  amount: item.quantity * item.suggestedDonation
-                })),
-                notes: `${donationType} payment`
-              })}
+              onClick={handleSubmit}
               loading={addDonationMutation.isPending}
-              disabled={donationItems.length === 0}
+              disabled={!selectedMemberId || donationItems.length === 0}
             >
               Complete Donation
             </Button>

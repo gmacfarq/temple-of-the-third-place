@@ -69,7 +69,7 @@ const getDonations = async (req, res) => {
       SELECT
         d.*,
         CONCAT(u.first_name, ' ', u.last_name) as member_name,
-        GROUP_CONCAT(s.name) as sacrament_names
+        GROUP_CONCAT(CONCAT(s.name, ' (', di.quantity, ')')) as sacrament_names
       FROM donations d
       JOIN users u ON d.member_id = u.id
       LEFT JOIN donation_items di ON d.id = di.donation_id
@@ -78,10 +78,14 @@ const getDonations = async (req, res) => {
       ORDER BY d.created_at DESC
     `);
 
+    console.log('Fetched donations:', donations); // Debug log
     res.json(donations);
   } catch (error) {
     console.error('Error fetching donations:', error);
-    res.status(500).json({ message: 'Error fetching donations' });
+    res.status(500).json({
+      message: 'Error fetching donations',
+      error: error.message
+    });
   }
 };
 

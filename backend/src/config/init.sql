@@ -1,8 +1,14 @@
--- Switch to the database
-USE tottp_db;
+-- First drop tables in correct order to avoid foreign key conflicts
+DROP TABLE IF EXISTS donation_items;
+DROP TABLE IF EXISTS donations;
+DROP TABLE IF EXISTS inventory_audits;
+DROP TABLE IF EXISTS inventory_transfers;
+DROP TABLE IF EXISTS check_ins;
+DROP TABLE IF EXISTS sacraments;
+DROP TABLE IF EXISTS users;
 
--- Users and Authentication
-CREATE TABLE IF NOT EXISTS users (
+-- Then create tables in correct order
+CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -87,12 +93,11 @@ CREATE TABLE IF NOT EXISTS inventory_audits (
     INDEX idx_sacrament (sacrament_id)
 );
 
--- -- Insert initial admin user (password: admin123 - change this in production!)
--- INSERT IGNORE INTO users (email, password_hash, first_name, last_name, role)
--- VALUES (
---     'admin@thirdplace.temple',
---     '$2b$10$vCcQBngWM8odVMCjqOZnYuMBuoMnEBZBEPPZuKTlIrIw9JzLnrG62',
---     'Temple',
---     'Admin',
---     'admin'
--- );
+-- INSERT INTO users (first_name, last_name, email, phone, role) VALUES
+-- ('John', 'Doe', 'john@example.com', '555-0101', 'member'),
+-- ('Jane', 'Smith', 'jane@example.com', '555-0102', 'member'),
+-- ('Bob', 'Johnson', 'bob@example.com', '555-0103', 'member'),
+-- ('Alice', 'Williams', 'alice@example.com', '555-0104', 'member'),
+-- ('Charlie', 'Brown', 'charlie@example.com', '555-0105', 'member');
+
+-- Remove the SOURCE command, we'll handle seeding in JavaScript
