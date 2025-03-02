@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Paper, Text, Table, NumberInput, Button, Group, Stack, TextInput } from '@mantine/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventory } from '../../services/api';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
+import { auditSchema, AuditFormData } from '../../schemas/inventorySchemas';
+import { notifications } from '@mantine/notifications';
 
 interface Sacrament {
   id: number;
@@ -22,38 +26,55 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
   const queryClient = useQueryClient();
   const [auditData, setAuditData] = useState<AuditData>({});
   const [globalNotes, setGlobalNotes] = useState('');
+  const [currentSacrament, setCurrentSacrament] = useState<number | null>(null);
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<AuditFormData>({
+    resolver: zodResolver(auditSchema)
+  });
 
   const auditMutation = useMutation({
-    mutationFn: async (data: { sacramentId: number; actualQuantity: number; notes: string }) => {
-      return inventory.recordAudit(data);
-    },
+    mutationFn: inventory.recordAudit,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacraments'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      notifications.show({
+        title: 'Success',
+        message: 'Audit recorded successfully',
+        color: 'green'
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to record audit: ${error.message}`,
+        color: 'red'
+      });
     }
   });
 
-  const handleAuditSubmit = async () => {
-    for (const [sacramentId, data] of Object.entries(auditData)) {
-      const notes = data.notes || globalNotes;
-      await auditMutation.mutateAsync({
-        sacramentId: Number(sacramentId),
-        actualQuantity: data.storageCount,
-        notes: notes || `Weekly audit ${new Date().toLocaleDateString()}`
+  const handleAuditSubmit = async (data: AuditFormData) => {
+    try {
+      await auditMutation.mutateAsync(data);
+      // Update local state to reflect the change
+      setAuditData(prev => {
+        const newData = { ...prev };
+        delete newData[data.sacramentId];
+        return newData;
       });
+      setCurrentSacrament(null);
+      reset();
+    } catch (error) {
+      console.error('Error submitting audit:', error);
     }
-    setAuditData({});
-    setGlobalNotes('');
   };
 
   const updateAuditData = (sacramentId: number, storageCount: number, notes: string = '') => {
     setAuditData(prev => ({
       ...prev,
-      [sacramentId]: { storageCount, notes }
+      [sacramentId]: { storageCount, notes: notes || globalNotes }
     }));
+    setCurrentSacrament(sacramentId);
   };
-
-  const hasChanges = Object.keys(auditData).length > 0;
 
   return (
     <Paper shadow="xs" p="md">
@@ -76,6 +97,7 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
               <th>Current Active</th>
               <th>Actual Storage Count</th>
               <th>Notes</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -91,6 +113,7 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
                     onChange={(value) => updateAuditData(sacrament.id, Number(value))}
                     min={0}
                     style={{ width: 100 }}
+                    error={currentSacrament === sacrament.id && errors.actualQuantity?.message}
                   />
                 </td>
                 <td>
@@ -104,20 +127,27 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
                     placeholder="Item-specific notes..."
                   />
                 </td>
+                <td>
+                  <Button
+                    size="xs"
+                    onClick={() => {
+                      const data = {
+                        sacramentId: sacrament.id,
+                        actualQuantity: auditData[sacrament.id]?.storageCount ?? sacrament.num_storage,
+                        notes: auditData[sacrament.id]?.notes || globalNotes || `Audit on ${new Date().toLocaleDateString()}`
+                      };
+                      handleAuditSubmit(data);
+                    }}
+                    disabled={!auditData[sacrament.id]}
+                    loading={auditMutation.isPending && currentSacrament === sacrament.id}
+                  >
+                    Submit
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
         </Table>
-
-        <Group justify="flex-end">
-          <Button
-            onClick={handleAuditSubmit}
-            disabled={!hasChanges}
-            loading={auditMutation.isPending}
-          >
-            Submit Audit
-          </Button>
-        </Group>
       </Stack>
     </Paper>
   );

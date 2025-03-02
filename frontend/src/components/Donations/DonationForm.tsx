@@ -1,187 +1,200 @@
-import { useState } from 'react';
-import { NumberInput, Button, Group, Stack, Select, Paper, Text, ActionIcon } from '@mantine/core';
-import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
-import styles from '../Members/Members.module.css';
-import RecentCheckIns from './RecentCheckIns';
-import SacramentSearch from '../Sacraments/SacramentSearch';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { donations } from '../../services/api';
-
-type DonationType = 'cash' | 'card' | 'other';
-
-interface DonationItem {
-  sacramentId: number;
-  quantity: number;
-  suggestedDonation: number;
-}
-
-interface Sacrament {
-  id: number;
-  name: string;
-  suggested_donation: string;
-}
-
-interface DonationSubmission {
-  memberId: number;
-  type: string;
-  items: {
-    sacramentId: number;
-    quantity: number;
-    amount: number;
-  }[];
-  notes?: string;
-}
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { donationFormSchema, DonationFormData } from '../../schemas/donationSchemas';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { donations, members, sacraments } from '../../services/api';
+import {
+  Button,
+  Select,
+  NumberInput,
+  TextInput,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  ActionIcon
+} from '@mantine/core';
+import { IconTrash, IconPlus } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 
 export default function DonationForm() {
   const queryClient = useQueryClient();
-  const [donationType, setDonationType] = useState<DonationType>('cash');
-  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
-  const [donationItems, setDonationItems] = useState<DonationItem[]>([]);
 
-  const types: DonationType[] = ['cash', 'card', 'other'];
+  const { data: membersList } = useQuery({
+    queryKey: ['members'],
+    queryFn: members.getAll
+  });
 
-  const cycleDonationType = (direction: 'up' | 'down') => {
-    const currentIndex = types.indexOf(donationType);
-    let newIndex;
-    if (direction === 'up') {
-      newIndex = currentIndex === types.length - 1 ? 0 : currentIndex + 1;
-    } else {
-      newIndex = currentIndex === 0 ? types.length - 1 : currentIndex - 1;
+  const { data: sacramentsList } = useQuery({
+    queryKey: ['sacraments'],
+    queryFn: sacraments.getAll
+  });
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<DonationFormData>({
+    resolver: zodResolver(donationFormSchema),
+    defaultValues: {
+      memberId: 0,
+      type: 'cash',
+      items: [{ sacramentId: 0, quantity: 1, amount: 0 }],
+      notes: ''
     }
-    setDonationType(types[newIndex]);
-  };
+  });
 
-  const addDonationMutation = useMutation({
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'items'
+  });
+
+  const donationMutation = useMutation({
     mutationFn: donations.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['donations'] });
-      setSelectedMemberId(null);
-      setDonationItems([]);
+      reset();
+      notifications.show({
+        title: 'Success',
+        message: 'Donation recorded successfully',
+        color: 'green'
+      });
     },
+    onError: (error) => {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to record donation: ${error.message}`,
+        color: 'red'
+      });
+    }
   });
 
-  const addDonationItem = (sacrament: Sacrament) => {
-    setDonationItems([
-      ...donationItems,
-      {
-        sacramentId: sacrament.id,
-        quantity: 1,
-        suggestedDonation: parseFloat(sacrament.suggested_donation)
-      }
-    ]);
-  };
-
-  const updateQuantity = (index: number, quantity: number) => {
-    const newItems = [...donationItems];
-    newItems[index].quantity = quantity;
-    setDonationItems(newItems);
-  };
-
-  const removeDonationItem = (index: number) => {
-    setDonationItems(donationItems.filter((_, i) => i !== index));
-  };
-
-  const calculateTotal = () => {
-    return donationItems.reduce((total, item) =>
-      total + (item.quantity * item.suggestedDonation), 0
-    );
-  };
-
-  const handleSubmit = () => {
-    if (!selectedMemberId || donationItems.length === 0) return;
-
-    const submission: DonationSubmission = {
-      memberId: selectedMemberId,
-      type: donationType,
-      items: donationItems.map(item => ({
-        sacramentId: item.sacramentId,
-        quantity: item.quantity,
-        amount: item.quantity * item.suggestedDonation
-      })),
-      notes: `${donationType} payment`
-    };
-
-    console.log('Submitting donation:', submission); // Debug log
-    addDonationMutation.mutate(submission);
+  const onSubmit = (data: DonationFormData) => {
+    donationMutation.mutate(data);
   };
 
   return (
     <Paper shadow="xs" p="md">
-      <Stack gap="md">
-        <Text size="xl">New Donation</Text>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Stack spacing="md">
+          <Text size="xl">Record Donation</Text>
 
-        <Select
-          className={styles.selectWrapper}
-          label="Donation Type"
-          value={donationType}
-          data={types.map(type => ({ value: type, label: type.charAt(0).toUpperCase() + type.slice(1) }))}
-          readOnly
-          rightSection={
-            <Group gap={0}>
-              <ActionIcon onClick={(e) => { e.stopPropagation(); cycleDonationType('up'); }}>
-                <IconChevronUp size={24} />
-              </ActionIcon>
-              <ActionIcon onClick={(e) => { e.stopPropagation(); cycleDonationType('down'); }}>
-                <IconChevronDown size={24} />
+          <Controller
+            name="memberId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                label="Member"
+                placeholder="Select member"
+                data={membersList?.map(m => ({ value: m.id.toString(), label: `${m.first_name} ${m.last_name}` })) || []}
+                error={errors.memberId?.message}
+                onChange={(value) => field.onChange(parseInt(value || '0'))}
+                required
+              />
+            )}
+          />
+
+          <Controller
+            name="type"
+            control={control}
+            render={({ field }) => (
+              <Select
+                label="Payment Type"
+                placeholder="Select payment type"
+                data={[
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'card', label: 'Card' },
+                  { value: 'other', label: 'Other' }
+                ]}
+                error={errors.type?.message}
+                {...field}
+                required
+              />
+            )}
+          />
+
+          <Text weight={500}>Items</Text>
+          {fields.map((field, index) => (
+            <Group key={field.id} align="flex-end">
+              <Controller
+                name={`items.${index}.sacramentId`}
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Sacrament"
+                    placeholder="Select sacrament"
+                    data={sacramentsList?.map(s => ({ value: s.id.toString(), label: s.name })) || []}
+                    error={errors.items?.[index]?.sacramentId?.message}
+                    onChange={(value) => field.onChange(parseInt(value || '0'))}
+                    style={{ flex: 2 }}
+                    required
+                  />
+                )}
+              />
+
+              <Controller
+                name={`items.${index}.quantity`}
+                control={control}
+                render={({ field }) => (
+                  <NumberInput
+                    label="Quantity"
+                    min={1}
+                    error={errors.items?.[index]?.quantity?.message}
+                    onChange={(value) => field.onChange(value)}
+                    value={field.value}
+                    style={{ flex: 1 }}
+                    required
+                  />
+                )}
+              />
+
+              <Controller
+                name={`items.${index}.amount`}
+                control={control}
+                render={({ field }) => (
+                  <NumberInput
+                    label="Amount"
+                    min={0}
+                    precision={2}
+                    error={errors.items?.[index]?.amount?.message}
+                    onChange={(value) => field.onChange(value)}
+                    value={field.value}
+                    style={{ flex: 1 }}
+                    required
+                  />
+                )}
+              />
+
+              <ActionIcon color="red" onClick={() => fields.length > 1 && remove(index)}>
+                <IconTrash size={16} />
               </ActionIcon>
             </Group>
-          }
-        />
+          ))}
 
-        <Text fw={500}>Recently Checked-In Members</Text>
-        <RecentCheckIns
-          onSelectMember={setSelectedMemberId}
-          selectedMemberId={selectedMemberId}
-        />
+          <Button
+            leftIcon={<IconPlus size={16} />}
+            variant="outline"
+            onClick={() => append({ sacramentId: 0, quantity: 1, amount: 0 })}
+          >
+            Add Item
+          </Button>
 
-        {selectedMemberId && (
-          <>
-            <Text fw={500}>Sacraments</Text>
-            <SacramentSearch onSelect={addDonationItem} />
-
-            {donationItems.length > 0 && (
-              <Stack gap="sm">
-                <Text fw={500}>Selected Items</Text>
-                {donationItems.map((item, index) => (
-                  <Group key={index} justify="apart">
-                    <Text>Sacrament {item.sacramentId}</Text>
-                    <Group gap="xs">
-                      <NumberInput
-                        value={item.quantity}
-                        onChange={(value) => updateQuantity(index, Number(value))}
-                        min={1}
-                        max={99}
-                        style={{ width: 80 }}
-                      />
-                      <Button
-                        variant="subtle"
-                        color="red"
-                        onClick={() => removeDonationItem(index)}
-                      >
-                        Remove
-                      </Button>
-                    </Group>
-                  </Group>
-                ))}
-
-                <Group justify="apart" mt="md">
-                  <Text size="lg" fw={500}>Total Suggested Donation:</Text>
-                  <Text size="lg" fw={500}>${calculateTotal().toFixed(2)}</Text>
-                </Group>
-              </Stack>
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => (
+              <TextInput
+                label="Notes"
+                placeholder="Optional notes"
+                error={errors.notes?.message}
+                {...field}
+              />
             )}
+          />
 
-            <Button
-              fullWidth
-              onClick={handleSubmit}
-              loading={addDonationMutation.isPending}
-              disabled={!selectedMemberId || donationItems.length === 0}
-            >
-              Complete Donation
+          <Group position="right">
+            <Button type="submit" loading={donationMutation.isPending}>
+              Record Donation
             </Button>
-          </>
-        )}
-      </Stack>
+          </Group>
+        </Stack>
+      </form>
     </Paper>
   );
 }

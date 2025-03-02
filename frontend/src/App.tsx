@@ -12,6 +12,9 @@ import Inventory from './components/Inventory';
 import MemberDetails from './components/Members/MemberDetails';
 import SacramentForm from './components/Sacraments/SacramentForm';
 import SacramentDetail from './components/Sacraments/SacramentDetail';
+import { Notifications } from '@mantine/notifications';
+import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 
 const queryClient = new QueryClient();
 
@@ -26,6 +29,7 @@ export default function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <MantineProvider>
+            <Notifications />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute />}>

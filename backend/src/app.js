@@ -77,4 +77,9 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
+const errorHandler = require('./middleware/errorHandler');
+
+// Error handling middleware (must be after routes)
+app.use(errorHandler);
+
 module.exports = app;

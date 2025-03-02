@@ -1,10 +1,17 @@
 const pool = require('../config/database');
+const { NotFoundError, ValidationError, InternalServerError } = require('../utils/errors');
 
-const createDonation = async (req, res) => {
+const createDonation = async (req, res, next) => {
   const { memberId, type, items, notes } = req.body;
   const connection = await pool.getConnection();
 
   try {
+    // Verify member exists
+    const [member] = await connection.query('SELECT id FROM users WHERE id = ?', [memberId]);
+    if (member.length === 0) {
+      throw new NotFoundError('Member not found');
+    }
+
     await connection.beginTransaction();
 
     // Calculate total amount from all items
@@ -19,6 +26,20 @@ const createDonation = async (req, res) => {
 
     // Insert all donation items
     for (const item of items) {
+      // Verify sacrament exists and has enough inventory
+      const [sacrament] = await connection.query(
+        'SELECT id, num_active FROM sacraments WHERE id = ?',
+        [item.sacramentId]
+      );
+
+      if (sacrament.length === 0) {
+        throw new NotFoundError(`Sacrament with ID ${item.sacramentId} not found`);
+      }
+
+      if (sacrament[0].num_active < item.quantity) {
+        throw new ValidationError(`Insufficient inventory for sacrament ID ${item.sacramentId}`);
+      }
+
       await connection.query(
         'INSERT INTO donation_items (donation_id, sacrament_id, quantity, amount) VALUES (?, ?, ?, ?)',
         [donationId, item.sacramentId, item.quantity, item.amount]
@@ -56,8 +77,7 @@ const createDonation = async (req, res) => {
 
   } catch (error) {
     await connection.rollback();
-    console.error('Error creating donation:', error);
-    res.status(500).json({ message: 'Error creating donation' });
+    next(error); // Pass to error handler
   } finally {
     connection.release();
   }

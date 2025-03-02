@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { auth, checkRole } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { createDonationSchema } = require('../schemas/donationSchemas');
 const {
   createDonation,
   getDonations,
@@ -9,7 +11,7 @@ const {
 } = require('../controllers/donationController');
 
 // POST /api/donations - Record new donation
-router.post('/', auth, createDonation);
+router.post('/', auth, validate(createDonationSchema), createDonation);
 
 // GET /api/donations - List all donations (admin/advisor only)
 router.get('/', auth, checkRole(['admin', 'advisor']), getDonations);
