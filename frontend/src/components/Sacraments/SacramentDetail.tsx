@@ -19,6 +19,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { sacraments } from '../../services/api';
 import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import styles from '../Members/Members.module.css';
+import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 
 type SacramentType = 'chocolate' | 'dried_fruit' | 'capsule' | 'gummy' | 'psily_tart' | 'tincture' | 'other';
 
@@ -203,27 +204,14 @@ export default function SacramentDetail() {
         </Stack>
       </Paper>
 
-      <Modal
-        opened={deleteModalOpen}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        title="Confirm Deletion"
-      >
-        <Stack gap="md">
-          <Text>Are you sure you want to delete {sacrament.name}?</Text>
-          <Group justify="space-between">
-            <Button variant="subtle" onClick={() => setDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              loading={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate(sacrament.id)}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+        onConfirm={() => deleteMutation.mutate(sacrament.id)}
+        itemType="sacrament"
+        message={`Are you sure you want to delete ${sacrament.name}?`}
+        isLoading={deleteMutation.isPending}
+      />
     </>
   );
 }

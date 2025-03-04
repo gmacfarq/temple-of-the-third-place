@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TextInput, Button, Group, Paper, Text, LoadingOverlay, Stack, Table, Pagination } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { members } from '../../services/api';
+import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 
 interface EditableFields {
   first_name: string;
@@ -24,6 +25,7 @@ export default function MemberDetails() {
   const [editedFields, setEditedFields] = useState<EditableFields | null>(null);
   const [page, setPage] = useState(1);
   const perPage = 5;
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const { data: member, isLoading } = useQuery({
     queryKey: ['member', id],
@@ -53,6 +55,7 @@ export default function MemberDetails() {
   const deleteMutation = useMutation({
     mutationFn: members.delete,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
       navigate('/members');
     }
   });
@@ -102,117 +105,124 @@ export default function MemberDetails() {
   if (!member) return <Text>Member not found</Text>;
 
   return (
-    <Paper p="md">
-      <Group justify="space-between" mb="xl">
-        <Text size="xl">Member Details</Text>
-        <Group>
-          <Button
-            variant="outline"
-            color="green"
-            onClick={() => checkInMutation.mutate()}
-            loading={checkInMutation.isPending}
-          >
-            Check In
-          </Button>
-          <Button variant="outline" onClick={handleEdit}>
-            {isEditing ? 'Cancel' : 'Edit'}
-          </Button>
-          <Button
-            color="red"
-            variant="outline"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete this member?')) {
-                deleteMutation.mutate(member.id);
-              }
-            }}
-          >
-            Delete
-          </Button>
-        </Group>
-      </Group>
-
-      <Stack>
-        <TextInput
-          label="First Name"
-          value={isEditing ? editedFields?.first_name : member.first_name}
-          onChange={(e) => setEditedFields(prev => ({ ...prev!, first_name: e.target.value }))}
-          error={isEditing && !editedFields?.first_name && 'First name is required'}
-          readOnly={!isEditing}
-          required
-        />
-        <TextInput
-          label="Last Name"
-          value={isEditing ? editedFields?.last_name : member.last_name}
-          onChange={(e) => setEditedFields(prev => ({ ...prev!, last_name: e.target.value }))}
-          error={isEditing && !editedFields?.last_name && 'Last name is required'}
-          readOnly={!isEditing}
-          required
-        />
-        <TextInput
-          label="Email"
-          value={isEditing ? editedFields?.email : member.email}
-          onChange={(e) => setEditedFields(prev => ({ ...prev!, email: e.target.value }))}
-          error={isEditing && (!editedFields?.email ? 'Email is required' :
-            !editedFields.email.includes('@') && 'Invalid email')}
-          readOnly={!isEditing}
-          required
-        />
-
-        {isEditing && (
-          <Group justify="flex-end" mt="md">
+    <>
+      <Paper p="md">
+        <Group justify="space-between" mb="xl">
+          <Text size="xl">Member Details</Text>
+          <Group>
             <Button
-              onClick={handleSave}
-              loading={updateMutation.isPending}
+              variant="outline"
+              color="green"
+              onClick={() => checkInMutation.mutate()}
+              loading={checkInMutation.isPending}
             >
-              Save Changes
+              Check In
+            </Button>
+            <Button variant="outline" onClick={handleEdit}>
+              {isEditing ? 'Cancel' : 'Edit'}
+            </Button>
+            <Button
+              color="red"
+              variant="outline"
+              onClick={() => setDeleteModalOpen(true)}
+            >
+              Delete Member
             </Button>
           </Group>
-        )}
-      </Stack>
-
-      <Stack mt="xl">
-        <Group justify="space-between">
-          <Text size="xl">Recent Check-ins</Text>
-          <Text size="md">Total Check-ins: {checkIns?.totalCheckIns || 0}</Text>
         </Group>
 
-        <Table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {checkIns?.data.map((checkIn: CheckIn) => (
-              <tr key={checkIn.id}>
-                <td>{new Date(checkIn.timestamp).toLocaleDateString()}</td>
-                <td>{new Date(checkIn.timestamp).toLocaleTimeString()}</td>
-                <td>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    onClick={() => deleteCheckInMutation.mutate(checkIn.id)}
-                    loading={deleteCheckInMutation.isPending}
-                  >
-                    <IconX size={16} />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-
-        <Group justify="center">
-          <Pagination
-            value={page}
-            onChange={setPage}
-            total={Math.ceil((checkIns?.total || 0) / perPage)}
+        <Stack>
+          <TextInput
+            label="First Name"
+            value={isEditing ? editedFields?.first_name : member.first_name}
+            onChange={(e) => setEditedFields(prev => ({ ...prev!, first_name: e.target.value }))}
+            error={isEditing && !editedFields?.first_name && 'First name is required'}
+            readOnly={!isEditing}
+            required
           />
-        </Group>
-      </Stack>
-    </Paper>
+          <TextInput
+            label="Last Name"
+            value={isEditing ? editedFields?.last_name : member.last_name}
+            onChange={(e) => setEditedFields(prev => ({ ...prev!, last_name: e.target.value }))}
+            error={isEditing && !editedFields?.last_name && 'Last name is required'}
+            readOnly={!isEditing}
+            required
+          />
+          <TextInput
+            label="Email"
+            value={isEditing ? editedFields?.email : member.email}
+            onChange={(e) => setEditedFields(prev => ({ ...prev!, email: e.target.value }))}
+            error={isEditing && (!editedFields?.email ? 'Email is required' :
+              !editedFields.email.includes('@') && 'Invalid email')}
+            readOnly={!isEditing}
+            required
+          />
+
+          {isEditing && (
+            <Group justify="flex-end" mt="md">
+              <Button
+                onClick={handleSave}
+                loading={updateMutation.isPending}
+              >
+                Save Changes
+              </Button>
+            </Group>
+          )}
+        </Stack>
+
+        <Stack mt="xl">
+          <Group justify="space-between">
+            <Text size="xl">Recent Check-ins</Text>
+            <Text size="md">Total Check-ins: {checkIns?.totalCheckIns || 0}</Text>
+          </Group>
+
+          <Table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {checkIns?.data.map((checkIn: CheckIn) => (
+                <tr key={checkIn.id}>
+                  <td>{new Date(checkIn.timestamp).toLocaleDateString()}</td>
+                  <td>{new Date(checkIn.timestamp).toLocaleTimeString()}</td>
+                  <td>
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      color="red"
+                      onClick={() => deleteCheckInMutation.mutate(checkIn.id)}
+                      loading={deleteCheckInMutation.isPending}
+                    >
+                      <IconX size={16} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+
+          <Group justify="center">
+            <Pagination
+              value={page}
+              onChange={setPage}
+              total={Math.ceil((checkIns?.total || 0) / perPage)}
+            />
+          </Group>
+        </Stack>
+      </Paper>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={() => deleteMutation.mutate(member.id)}
+        itemType="member"
+        message={`Are you sure you want to delete ${member.first_name} ${member.last_name}?`}
+        isLoading={deleteMutation.isPending}
+      />
+    </>
   );
 }

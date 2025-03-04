@@ -150,9 +150,46 @@ const getDonationStats = async (req, res) => {
   }
 };
 
+const deleteDonation = async (req, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const donationId = req.params.id;
+
+    // Get the donation items to restore inventory
+    const [items] = await connection.query(
+      'SELECT sacrament_id, quantity FROM donation_items WHERE donation_id = ?',
+      [donationId]
+    );
+
+    // Restore inventory for each item
+    for (const item of items) {
+      await connection.query(
+        'UPDATE sacraments SET num_active = num_active + ? WHERE id = ?',
+        [item.quantity, item.sacrament_id]
+      );
+    }
+
+    // Delete the donation (donation_items will be deleted by CASCADE)
+    await connection.query('DELETE FROM donations WHERE id = ?', [donationId]);
+
+    await connection.commit();
+    res.json({ message: 'Donation deleted successfully' });
+
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createDonation,
   getDonations,
   getMemberDonations,
-  getDonationStats
+  getDonationStats,
+  deleteDonation
 };

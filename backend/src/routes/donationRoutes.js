@@ -7,7 +7,8 @@ const {
   createDonation,
   getDonations,
   getMemberDonations,
-  getDonationStats
+  getDonationStats,
+  deleteDonation
 } = require('../controllers/donationController');
 
 // POST /api/donations - Record new donation
@@ -21,5 +22,8 @@ router.get('/stats', auth, checkRole(['admin', 'advisor']), getDonationStats);
 
 // GET /api/donations/member/:memberId - Get member's donation history
 router.get('/member/:memberId', auth, getMemberDonations);
+
+// Add delete route
+router.delete('/:id', auth, checkRole(['admin']), deleteDonation);
 
 module.exports = router;
