@@ -18,6 +18,7 @@ interface Sacrament {
 interface AuditData {
   [key: number]: {
     storageCount: number;
+    activeCount: number;
     notes: string;
   };
 }
@@ -54,7 +55,12 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
 
   const handleAuditSubmit = async (data: AuditFormData) => {
     try {
-      await auditMutation.mutateAsync(data);
+      await auditMutation.mutateAsync({
+        sacramentId: data.sacramentId,
+        actualStorage: data.actualStorage,
+        actualActive: data.actualActive,
+        notes: data.notes
+      });
       // Update local state to reflect the change
       setAuditData(prev => {
         const newData = { ...prev };
@@ -68,12 +74,38 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
     }
   };
 
-  const updateAuditData = (sacramentId: number, storageCount: number, notes: string = '') => {
+  const updateAuditData = (sacramentId: number, storageCount: number, activeCount: number, notes: string = '') => {
     setAuditData(prev => ({
       ...prev,
-      [sacramentId]: { storageCount, notes: notes || globalNotes }
+      [sacramentId]: {
+        storageCount,
+        activeCount,
+        notes: notes || globalNotes
+      }
     }));
     setCurrentSacrament(sacramentId);
+  };
+
+  const submitAllAudits = async () => {
+    const sacramentIds = Object.keys(auditData).map(Number);
+
+    for (const sacramentId of sacramentIds) {
+      const data = {
+        sacramentId,
+        actualStorage: auditData[sacramentId].storageCount,
+        actualActive: auditData[sacramentId].activeCount,
+        notes: auditData[sacramentId].notes || globalNotes || `Audit on ${new Date().toLocaleDateString()}`
+      };
+
+      try {
+        await auditMutation.mutateAsync(data);
+      } catch (error) {
+        console.error(`Error submitting audit for sacrament ${sacramentId}:`, error);
+      }
+    }
+
+    // Clear all audit data after submission
+    setAuditData({});
   };
 
   return (
@@ -82,10 +114,10 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
         <Text size="xl">Inventory Audit</Text>
 
         <TextInput
-          label="Global Audit Notes"
+          label="Global Notes"
           value={globalNotes}
           onChange={(e) => setGlobalNotes(e.target.value)}
-          placeholder="Notes for all items being audited..."
+          placeholder="Notes to apply to all audits..."
         />
 
         <Table>
@@ -96,6 +128,7 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
               <th>Current Storage</th>
               <th>Current Active</th>
               <th>Actual Storage Count</th>
+              <th>Actual Active Count</th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -110,10 +143,29 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
                 <td>
                   <NumberInput
                     value={auditData[sacrament.id]?.storageCount ?? sacrament.num_storage}
-                    onChange={(value) => updateAuditData(sacrament.id, Number(value))}
+                    onChange={(value) => updateAuditData(
+                      sacrament.id,
+                      Number(value),
+                      auditData[sacrament.id]?.activeCount ?? sacrament.num_active,
+                      auditData[sacrament.id]?.notes
+                    )}
                     min={0}
                     style={{ width: 100 }}
-                    error={currentSacrament === sacrament.id && errors.actualQuantity?.message}
+                    error={currentSacrament === sacrament.id && errors.actualStorage?.message}
+                  />
+                </td>
+                <td>
+                  <NumberInput
+                    value={auditData[sacrament.id]?.activeCount ?? sacrament.num_active}
+                    onChange={(value) => updateAuditData(
+                      sacrament.id,
+                      auditData[sacrament.id]?.storageCount ?? sacrament.num_storage,
+                      Number(value),
+                      auditData[sacrament.id]?.notes
+                    )}
+                    min={0}
+                    style={{ width: 100 }}
+                    error={currentSacrament === sacrament.id && errors.actualActive?.message}
                   />
                 </td>
                 <td>
@@ -122,6 +174,7 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
                     onChange={(e) => updateAuditData(
                       sacrament.id,
                       auditData[sacrament.id]?.storageCount ?? sacrament.num_storage,
+                      auditData[sacrament.id]?.activeCount ?? sacrament.num_active,
                       e.target.value
                     )}
                     placeholder="Item-specific notes..."
@@ -133,7 +186,8 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
                     onClick={() => {
                       const data = {
                         sacramentId: sacrament.id,
-                        actualQuantity: auditData[sacrament.id]?.storageCount ?? sacrament.num_storage,
+                        actualStorage: auditData[sacrament.id]?.storageCount ?? sacrament.num_storage,
+                        actualActive: auditData[sacrament.id]?.activeCount ?? sacrament.num_active,
                         notes: auditData[sacrament.id]?.notes || globalNotes || `Audit on ${new Date().toLocaleDateString()}`
                       };
                       handleAuditSubmit(data);
@@ -148,6 +202,18 @@ export default function InventoryAudit({ sacraments }: { sacraments: Sacrament[]
             ))}
           </tbody>
         </Table>
+
+        {Object.keys(auditData).length > 0 && (
+          <Group justify="flex-end">
+            <Button
+              onClick={submitAllAudits}
+              loading={auditMutation.isPending}
+              color="green"
+            >
+              Submit All Audits ({Object.keys(auditData).length})
+            </Button>
+          </Group>
+        )}
       </Stack>
     </Paper>
   );

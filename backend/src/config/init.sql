@@ -25,7 +25,7 @@ CREATE TABLE users (
 CREATE TABLE IF NOT EXISTS sacraments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
-    type VARCHAR(100) NOT NULL,
+    type ENUM('chocolate', 'dried_fruit', 'capsule', 'gummy', 'psily_tart', 'tincture', 'other') NOT NULL,
     strain VARCHAR(100),
     description TEXT,
     num_storage INT DEFAULT 0,
@@ -36,19 +36,21 @@ CREATE TABLE IF NOT EXISTS sacraments (
     INDEX idx_batch (batch_id)
 );
 
--- Check-ins (simplified)
+-- Check-ins
 CREATE TABLE IF NOT EXISTS check_ins (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
+    user_id INT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id),
+    INDEX idx_timestamp (timestamp)
 );
 
 -- Donations
-CREATE TABLE donations (
+CREATE TABLE IF NOT EXISTS donations (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    member_id INT NOT NULL,
-    type VARCHAR(50) NOT NULL,
+    member_id INT,
+    type ENUM('cash', 'card', 'other') NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -56,10 +58,10 @@ CREATE TABLE donations (
 );
 
 -- Donation Items
-CREATE TABLE donation_items (
+CREATE TABLE IF NOT EXISTS donation_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    donation_id INT NOT NULL,
-    sacrament_id INT NOT NULL,
+    donation_id INT,
+    sacrament_id INT,
     quantity INT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (donation_id) REFERENCES donations(id),
@@ -84,7 +86,8 @@ CREATE TABLE IF NOT EXISTS inventory_transfers (
 CREATE TABLE IF NOT EXISTS inventory_audits (
     id INT PRIMARY KEY AUTO_INCREMENT,
     sacrament_id INT,
-    actual_quantity INT NOT NULL,
+    actual_storage INT NOT NULL,
+    actual_active INT NOT NULL,
     notes TEXT,
     audited_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

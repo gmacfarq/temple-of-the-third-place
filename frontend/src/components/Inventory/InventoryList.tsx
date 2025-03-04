@@ -1,7 +1,8 @@
-import { Table, Group, Text, ActionIcon, Paper, Stack } from '@mantine/core';
-import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
+import { Table, Group, Text, ActionIcon, Paper, Stack, NumberInput, Button } from '@mantine/core';
+import { IconChevronUp, IconChevronDown, IconPlus } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventory } from '../../services/api';
+import { useState } from 'react';
 
 interface Sacrament {
   id: number;
@@ -12,24 +13,36 @@ interface Sacrament {
   num_active: number;
 }
 
+interface TransferQuantities {
+  [key: number]: number;
+}
+
 export default function InventoryList({ sacraments }: { sacraments: Sacrament[] }) {
   const queryClient = useQueryClient();
+  const [transferQuantities, setTransferQuantities] = useState<TransferQuantities>({});
 
   const transferMutation = useMutation({
-    mutationFn: (data: { sacramentId: number; quantity: number; type: 'in' | 'out' }) =>
+    mutationFn: (data: { sacramentId: number; quantity: number; type: 'to_active' | 'to_storage' | 'add_storage' }) =>
       inventory.recordTransfer(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacraments'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
     }
   });
 
-  const handleTransfer = (sacramentId: number, type: 'in' | 'out') => {
+  const handleTransfer = (sacramentId: number, type: 'to_active' | 'to_storage' | 'add_storage') => {
+    const quantity = transferQuantities[sacramentId] || 1;
     transferMutation.mutate({
       sacramentId,
-      quantity: 1, // Transfer one at a time for now
+      quantity,
       type
     });
+    setTransferQuantities(prev => ({ ...prev, [sacramentId]: 1 }));
+  };
+
+  const getQuantity = (sacramentId: number) => transferQuantities[sacramentId] || 1;
+
+  const setQuantity = (sacramentId: number, value: number) => {
+    setTransferQuantities(prev => ({ ...prev, [sacramentId]: value }));
   };
 
   return (
@@ -41,9 +54,9 @@ export default function InventoryList({ sacraments }: { sacraments: Sacrament[] 
             <tr>
               <th>Name</th>
               <th>Type</th>
-              <th>Strain</th>
               <th>Storage</th>
               <th>Active</th>
+              <th>Transfer Quantity</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -52,24 +65,41 @@ export default function InventoryList({ sacraments }: { sacraments: Sacrament[] 
               <tr key={sacrament.id}>
                 <td>{sacrament.name}</td>
                 <td>{sacrament.type}</td>
-                <td>{sacrament.strain}</td>
                 <td>{sacrament.num_storage}</td>
                 <td>{sacrament.num_active}</td>
+                <td style={{ width: '120px' }}>
+                  <NumberInput
+                    value={getQuantity(sacrament.id)}
+                    onChange={(value) => setQuantity(sacrament.id, Number(value))}
+                    min={1}
+                    max={Math.max(sacrament.num_storage, sacrament.num_active, 100)}
+                    size="xs"
+                  />
+                </td>
                 <td>
-                  <Group gap={0}>
+                  <Group gap={5}>
                     <ActionIcon
-                      onClick={() => handleTransfer(sacrament.id, 'out')}
-                      disabled={sacrament.num_storage <= 0}
+                      variant="subtle"
+                      onClick={() => handleTransfer(sacrament.id, 'to_active')}
+                      disabled={sacrament.num_storage < getQuantity(sacrament.id)}
                       title="Move to Active"
                     >
-                      <IconChevronUp size={24} />
+                      <IconChevronUp size={16} />
                     </ActionIcon>
                     <ActionIcon
-                      onClick={() => handleTransfer(sacrament.id, 'in')}
-                      disabled={sacrament.num_active <= 0}
+                      variant="subtle"
+                      onClick={() => handleTransfer(sacrament.id, 'to_storage')}
+                      disabled={sacrament.num_active < getQuantity(sacrament.id)}
                       title="Return to Storage"
                     >
-                      <IconChevronDown size={24} />
+                      <IconChevronDown size={16} />
+                    </ActionIcon>
+                    <ActionIcon
+                      variant="subtle"
+                      onClick={() => handleTransfer(sacrament.id, 'add_storage')}
+                      title="Add to Storage"
+                    >
+                      <IconPlus size={16} />
                     </ActionIcon>
                   </Group>
                 </td>

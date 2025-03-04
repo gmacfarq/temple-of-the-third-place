@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const recordTransfer = async (req, res) => {
   try {
     const { sacramentId, quantity, type, notes } = req.body;
+    const userId = req.user.id;
 
     if (!sacramentId || !quantity || !type) {
       return res.status(400).json({ message: 'Sacrament ID, quantity, and type are required' });
@@ -25,25 +26,46 @@ const recordTransfer = async (req, res) => {
     await connection.beginTransaction();
 
     try {
-      // Record the transfer
-      await connection.query(
-        'INSERT INTO inventory_transfers (sacrament_id, quantity, type, notes) VALUES (?, ?, ?, ?)',
-        [sacramentId, quantity, type, notes]
-      );
-
       // Update quantities based on transfer type
       let newStorage = sacrament[0].num_storage;
       let newActive = sacrament[0].num_active;
+      let transferType = type;
 
-      if (type === 'in') {
-        newStorage += quantity;
-      } else if (type === 'out') {
-        if (newStorage < quantity) {
-          throw new Error('Insufficient inventory');
+      // Map frontend types to database types
+      if (type === 'to_active') {
+        // Check if there's enough in storage
+        if (sacrament[0].num_storage < quantity) {
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({ message: 'Not enough inventory in storage' });
         }
         newStorage -= quantity;
         newActive += quantity;
+        transferType = 'out'; // Map to database enum
+      } else if (type === 'to_storage') {
+        // Check if there's enough in active
+        if (sacrament[0].num_active < quantity) {
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({ message: 'Not enough inventory in active' });
+        }
+        newStorage += quantity;
+        newActive -= quantity;
+        transferType = 'in'; // Map to database enum
+      } else if (type === 'add_storage') {
+        newStorage += quantity;
+        transferType = 'in'; // Map to database enum
+      } else {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ message: 'Invalid transfer type' });
       }
+
+      // Record the transfer
+      await connection.query(
+        'INSERT INTO inventory_transfers (sacrament_id, quantity, type, notes, recorded_by) VALUES (?, ?, ?, ?, ?)',
+        [sacramentId, quantity, transferType, notes || null, userId]
+      );
 
       // Update sacrament quantities
       await connection.query(
@@ -53,7 +75,6 @@ const recordTransfer = async (req, res) => {
 
       await connection.commit();
       connection.release();
-
       res.status(201).json({ message: 'Transfer recorded successfully' });
     } catch (error) {
       await connection.rollback();
@@ -62,7 +83,10 @@ const recordTransfer = async (req, res) => {
     }
   } catch (error) {
     console.error('Error in recordTransfer:', error);
-    res.status(500).json({ message: 'Error recording transfer' });
+    res.status(500).json({
+      message: 'Error recording transfer',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -112,18 +136,18 @@ const getInventoryAlerts = async (req, res) => {
 
 const recordAudit = async (req, res) => {
   try {
-    const { sacramentId, actualQuantity, notes } = req.body;
-    console.log('Audit request:', { sacramentId, actualQuantity, notes });
+    const { sacramentId, actualStorage, actualActive, notes } = req.body;
+    const userId = req.user.id;
 
-    if (!sacramentId || actualQuantity === undefined) {
-      return res.status(400).json({ message: 'Sacrament ID and actual quantity are required' });
+    if (!sacramentId || actualStorage === undefined || actualActive === undefined) {
+      return res.status(400).json({ message: 'Sacrament ID, actual storage, and actual active are required' });
     }
 
     const connection = await pool.getConnection();
 
     // Verify sacrament exists
     const [sacrament] = await connection.query(
-      'SELECT id, num_storage FROM sacraments WHERE id = ?',
+      'SELECT id FROM sacraments WHERE id = ?',
       [sacramentId]
     );
 
@@ -138,22 +162,20 @@ const recordAudit = async (req, res) => {
     try {
       // Record the audit
       await connection.query(
-        'INSERT INTO inventory_audits (sacrament_id, actual_quantity, notes, audited_by) VALUES (?, ?, ?, ?)',
-        [sacramentId, actualQuantity, notes, req.user.id]
+        'INSERT INTO inventory_audits (sacrament_id, actual_storage, actual_active, notes, audited_by) VALUES (?, ?, ?, ?, ?)',
+        [sacramentId, actualStorage, actualActive, notes || null, userId]
       );
 
-      // Update the sacrament's storage quantity
+      // Update sacrament quantities
       await connection.query(
-        'UPDATE sacraments SET num_storage = ? WHERE id = ?',
-        [actualQuantity, sacramentId]
+        'UPDATE sacraments SET num_storage = ?, num_active = ? WHERE id = ?',
+        [actualStorage, actualActive, sacramentId]
       );
 
       await connection.commit();
       connection.release();
-
       res.status(201).json({ message: 'Audit recorded successfully' });
     } catch (error) {
-      console.error('Transaction error:', error);
       await connection.rollback();
       connection.release();
       throw error;
@@ -162,7 +184,7 @@ const recordAudit = async (req, res) => {
     console.error('Error in recordAudit:', error);
     res.status(500).json({
       message: 'Error recording audit',
-      error: process.env.NODE_ENV === 'test' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
