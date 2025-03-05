@@ -15,18 +15,29 @@ import {
   Grid,
   ActionIcon,
   Divider,
-  Box
+  Box,
+  Alert
 } from '@mantine/core';
-import { IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { members, sacraments, donations } from '../../services/api';
 import { donationFormSchema, DonationFormData } from '../../schemas/donationSchemas';
 import RecentCheckIns from './RecentCheckIns';
+import SacramentSearch from '../common/SacramentSearch';
 
 interface DonationItem {
   sacramentId: number;
   quantity: number;
   amount: number;
+}
+
+interface Sacrament {
+  id: number;
+  name: string;
+  type: string;
+  num_active: number;
+  num_storage: number;
+  suggested_donation: string;
 }
 
 export default function DonationForm() {
@@ -38,21 +49,48 @@ export default function DonationForm() {
   const [notes, setNotes] = useState('');
   const [paymentType, setPaymentType] = useState<'cash' | 'card' | 'other'>('cash');
   const [formKey, setFormKey] = useState(0);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
 
   const { data: membersList } = useQuery({
     queryKey: ['members'],
     queryFn: members.getAll
   });
 
-  const { data: sacramentsList } = useQuery({
+  const { data: sacramentsList } = useQuery<Sacrament[]>({
     queryKey: ['sacraments'],
     queryFn: sacraments.getAll
   });
+
+  // Check inventory whenever items change
+  useEffect(() => {
+    checkInventory();
+  }, [items, sacramentsList]);
+
+  const checkInventory = () => {
+    if (!sacramentsList) return;
+
+    setInventoryError(null);
+
+    for (const item of items) {
+      if (!item.sacramentId) continue;
+
+      const sacrament = sacramentsList.find(s => s.id === item.sacramentId);
+      if (!sacrament) continue;
+
+      const availableQuantity = sacrament.num_active;
+
+      if (item.quantity > availableQuantity) {
+        setInventoryError(`Not enough inventory for ${sacrament.name}. Only ${availableQuantity} available.`);
+        return;
+      }
+    }
+  };
 
   const donationMutation = useMutation({
     mutationFn: donations.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['donations'] });
+      queryClient.invalidateQueries({ queryKey: ['sacraments'] });
       notifications.show({
         title: 'Success',
         message: 'Donation recorded successfully',
@@ -75,6 +113,7 @@ export default function DonationForm() {
     setDiscountValue(0);
     setNotes('');
     setPaymentType('cash');
+    setInventoryError(null);
     setFormKey(prev => prev + 1);
   };
 
@@ -137,6 +176,15 @@ export default function DonationForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (inventoryError) {
+      notifications.show({
+        title: 'Inventory Error',
+        message: inventoryError,
+        color: 'red'
+      });
+      return;
+    }
+
     if (!selectedMemberId) {
       notifications.show({
         title: 'Error',
@@ -184,12 +232,25 @@ export default function DonationForm() {
     donationMutation.mutate(donationData);
   };
 
+  const getSacramentAvailability = (sacramentId: number) => {
+    if (!sacramentsList) return null;
+    const sacrament = sacramentsList.find(s => s.id === sacramentId);
+    if (!sacrament) return null;
+    return sacrament.num_active;
+  };
+
   return (
     <Box key={formKey}>
       <Grid>
         <Grid.Col span={8}>
           <form onSubmit={handleSubmit}>
             <Stack spacing="md">
+              {inventoryError && (
+                <Alert icon={<IconAlertCircle size={16} />} title="Inventory Error" color="red">
+                  {inventoryError}
+                </Alert>
+              )}
+
               <Group grow>
                 <div>
                   <Text weight={500} size="sm" mb={5}>Member</Text>
@@ -225,55 +286,57 @@ export default function DonationForm() {
 
               <Divider label="Donation Items" />
 
-              {items.map((item, index) => (
-                <Group key={index} grow align="flex-end">
-                  <div>
-                    <Text weight={500} size="sm" mb={5}>Sacrament</Text>
-                    <Select
-                      placeholder="Select sacrament"
-                      data={sacramentsList?.map(sacrament => ({
-                        value: sacrament.id.toString(),
-                        label: `${sacrament.name} (${sacrament.type})`
-                      })) || []}
-                      value={item.sacramentId ? item.sacramentId.toString() : ''}
-                      onChange={(value) => updateItem(index, 'sacramentId', parseInt(value || '0'))}
-                      required
-                      clearable
-                    />
-                  </div>
+              {items.map((item, index) => {
+                const sacrament = sacramentsList?.find(s => s.id === item.sacramentId);
+                const available = sacrament?.num_active || 0;
+                const isOverLimit = item.sacramentId > 0 && item.quantity > available;
 
-                  <div>
-                    <Text weight={500} size="sm" mb={5}>Quantity</Text>
-                    <NumberInput
-                      value={item.quantity}
-                      onChange={(value) => updateItem(index, 'quantity', Number(value))}
-                      min={1}
-                      required
-                    />
-                  </div>
+                return (
+                  <Group key={index} grow align="flex-end">
+                    <div>
+                      <SacramentSearch
+                        value={item.sacramentId || null}
+                        onChange={(value) => updateItem(index, 'sacramentId', value || 0)}
+                        error={isOverLimit ? `Not enough inventory` : undefined}
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <Text weight={500} size="sm" mb={5}>Amount</Text>
-                    <NumberInput
-                      value={item.amount}
-                      onChange={(value) => updateItem(index, 'amount', Number(value))}
-                      min={0}
-                      precision={2}
-                      required
-                      prefix="$"
-                    />
-                  </div>
+                    <div>
+                      <Text weight={500} size="sm" mb={5}>Quantity</Text>
+                      <NumberInput
+                        value={item.quantity}
+                        onChange={(value) => updateItem(index, 'quantity', Number(value))}
+                        min={1}
+                        max={sacrament?.num_active || undefined}
+                        required
+                        error={isOverLimit ? `Max ${available}` : undefined}
+                      />
+                    </div>
 
-                  <ActionIcon
-                    color="red"
-                    onClick={() => removeItem(index)}
-                    disabled={items.length <= 1}
-                    style={{ marginBottom: '8px' }}
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Group>
-              ))}
+                    <div>
+                      <Text weight={500} size="sm" mb={5}>Amount</Text>
+                      <NumberInput
+                        value={item.amount}
+                        onChange={(value) => updateItem(index, 'amount', Number(value))}
+                        min={0}
+                        precision={2}
+                        required
+                        prefix="$"
+                      />
+                    </div>
+
+                    <ActionIcon
+                      color="red"
+                      onClick={() => removeItem(index)}
+                      disabled={items.length <= 1}
+                      style={{ marginBottom: '8px' }}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Group>
+                );
+              })}
 
               <Button
                 leftSection={<IconPlus size={16} />}
@@ -333,7 +396,7 @@ export default function DonationForm() {
                   <Button
                     type="submit"
                     loading={donationMutation.isPending}
-                    disabled={!selectedMemberId || items.some(item => !item.sacramentId)}
+                    disabled={!selectedMemberId || items.some(item => !item.sacramentId) || !!inventoryError}
                   >
                     Record Donation
                   </Button>
