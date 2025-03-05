@@ -17,7 +17,17 @@ import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
-const queryClient = new QueryClient();
+// Configure QueryClient with optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      staleTime: 5 * 60 * 1000, // Data remains fresh for 5 minutes
+      retry: 1, // Only retry failed requests once
+      cacheTime: 10 * 60 * 1000, // Cache data for 10 minutes
+    },
+  },
+});
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();

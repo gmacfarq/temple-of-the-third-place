@@ -39,14 +39,11 @@ class ErrorBoundary extends Component<Props, State> {
         <Paper p="xl" shadow="md" style={{ maxWidth: 500, margin: '100px auto' }}>
           <Title order={2} mb="md">Something went wrong</Title>
           <Text mb="lg">
-            We're sorry, but there was an error in the application. Please try again or contact support.
+            We're sorry, but there was an error in the application. Please reload the page.
           </Text>
           <Group>
             <Button onClick={() => window.location.reload()}>
               Reload Page
-            </Button>
-            <Button variant="outline" onClick={() => this.setState({ hasError: false, error: null })}>
-              Try Again
             </Button>
           </Group>
         </Paper>
