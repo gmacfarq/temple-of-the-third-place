@@ -15,6 +15,7 @@ import SacramentDetail from './components/Sacraments/SacramentDetail';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 const queryClient = new QueryClient();
 
@@ -30,21 +31,23 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <MantineProvider>
             <Notifications />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route element={<ProtectedRoute />}>
-                <Route element={<Layout />}>
-                  <Route path="/members" element={<Members />} />
-                  <Route path="/members/:id" element={<MemberDetails />} />
-                  <Route path="/sacraments" element={<Sacraments />} />
-                  <Route path="/sacraments/new" element={<SacramentForm />} />
-                  <Route path="/sacraments/:id" element={<SacramentDetail />} />
-                  <Route path="/donations" element={<Donations />} />
-                  <Route path="/inventory" element={<Inventory />} />
-                  <Route path="/" element={<Navigate to="/members" />} />
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<Layout />}>
+                    <Route path="/members" element={<Members />} />
+                    <Route path="/members/:id" element={<MemberDetails />} />
+                    <Route path="/sacraments" element={<Sacraments />} />
+                    <Route path="/sacraments/new" element={<SacramentForm />} />
+                    <Route path="/sacraments/:id" element={<SacramentDetail />} />
+                    <Route path="/donations" element={<Donations />} />
+                    <Route path="/inventory" element={<Inventory />} />
+                    <Route path="/" element={<Navigate to="/members" />} />
+                  </Route>
                 </Route>
-              </Route>
-            </Routes>
+              </Routes>
+            </ErrorBoundary>
           </MantineProvider>
         </QueryClientProvider>
       </AuthProvider>

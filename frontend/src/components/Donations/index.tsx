@@ -5,6 +5,7 @@ import { IconTrash } from '@tabler/icons-react';
 import { donations } from '../../services/api';
 import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 import DonationForm from './DonationForm';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface Donation {
   id: number;
@@ -26,6 +27,7 @@ export default function Donations() {
   const queryClient = useQueryClient();
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const { showSuccess, showError } = useNotifications();
 
   const { data: donationsList, isLoading, error } = useQuery({
     queryKey: ['donations'],
@@ -36,8 +38,12 @@ export default function Donations() {
     mutationFn: donations.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['donations'] });
+      showSuccess('Donation deleted successfully');
       setDeleteModalOpen(false);
       setSelectedDonation(null);
+    },
+    onError: (error) => {
+      showError(error.response?.data?.message || 'Failed to delete donation');
     }
   });
 

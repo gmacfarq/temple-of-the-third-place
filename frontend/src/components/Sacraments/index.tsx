@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Table,
   Button,
@@ -9,6 +9,8 @@ import {
 } from '@mantine/core';
 import { sacraments } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '../../hooks/useNotifications';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Sacrament {
   id: number;
@@ -26,6 +28,30 @@ export default function Sacraments() {
   const { data: sacramentsList, isLoading, error } = useQuery({
     queryKey: ['sacraments'],
     queryFn: sacraments.getAll
+  });
+  const { showSuccess, showError } = useNotifications();
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: sacraments.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacraments'] });
+      showSuccess('Sacrament deleted successfully');
+    },
+    onError: (error) => {
+      showError(error.response?.data?.message || 'Failed to delete sacrament');
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: sacraments.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacraments'] });
+      showSuccess('Sacrament created successfully');
+    },
+    onError: (error) => {
+      showError(error.response?.data?.message || 'Failed to create sacrament');
+    }
   });
 
   return (

@@ -8,6 +8,7 @@ import styles from './Members.module.css';
 import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import MemberSearch from '../Members/MemberSearch';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface Member {
   id: number;
@@ -39,6 +40,7 @@ export default function Members() {
   });
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
+  const { showSuccess, showError } = useNotifications();
   // Fetch members
   const { data: membersList, isLoading } = useQuery({
     queryKey: ['members'],
@@ -71,6 +73,17 @@ export default function Members() {
     mutationFn: members.checkIn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: members.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      showSuccess('Member deleted successfully');
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.message || 'Failed to delete member');
     }
   });
 
@@ -125,7 +138,6 @@ export default function Members() {
               required
             />
             <Select
-              className={styles.selectWrapper}
               label="Role"
               value={formData.role}
               onChange={(value) => setFormData({ ...formData, role: value as UserRole })}
@@ -136,19 +148,6 @@ export default function Members() {
               ]}
               required
               defaultValue="member"
-              rightSectionWidth={80}
-              rightSection={
-                <Group gap={0}>
-                  <ActionIcon onClick={(e) => { e.stopPropagation(); cycleRole('up'); }}>
-                    <IconChevronUp size={24} />
-                  </ActionIcon>
-                  <ActionIcon onClick={(e) => { e.stopPropagation(); cycleRole('down'); }}>
-                    <IconChevronDown size={24} />
-                  </ActionIcon>
-                </Group>
-              }
-              styles={{ input: { cursor: 'default' } }}
-              readOnly
             />
             <Button type="submit" loading={addMemberMutation.isPending}>
               Add Member

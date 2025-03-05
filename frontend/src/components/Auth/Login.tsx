@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TextInput, PasswordInput, Button, Paper, Title, Container } from '@mantine/core';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,14 +10,16 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showError, showSuccess } = useNotifications();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password);
+      showSuccess('Login successful');
       navigate('/members');
-    } catch {
-      setError('Invalid email or password');
+    } catch (error) {
+      showError('Invalid email or password');
     }
   };
 

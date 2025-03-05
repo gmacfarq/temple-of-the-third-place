@@ -19,7 +19,7 @@ import {
   Alert
 } from '@mantine/core';
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
+import { useNotifications } from '../../hooks/useNotifications';
 import { members, sacraments, donations } from '../../services/api';
 import { donationFormSchema, DonationFormData } from '../../schemas/donationSchemas';
 import RecentCheckIns from './RecentCheckIns';
@@ -42,6 +42,7 @@ interface Sacrament {
 
 export default function DonationForm() {
   const queryClient = useQueryClient();
+  const { showSuccess, showError, showWarning } = useNotifications();
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const [items, setItems] = useState<DonationItem[]>([{ sacramentId: 0, quantity: 1, amount: 0 }]);
   const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
@@ -91,19 +92,11 @@ export default function DonationForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['donations'] });
       queryClient.invalidateQueries({ queryKey: ['sacraments'] });
-      notifications.show({
-        title: 'Success',
-        message: 'Donation recorded successfully',
-        color: 'green'
-      });
+      showSuccess('Donation recorded successfully');
       resetForm();
     },
     onError: (error) => {
-      notifications.show({
-        title: 'Error',
-        message: `Failed to record donation: ${(error as Error).message}`,
-        color: 'red'
-      });
+      showError(`Failed to record donation: ${(error as Error).message}`);
     }
   });
 
@@ -177,30 +170,18 @@ export default function DonationForm() {
     e.preventDefault();
 
     if (inventoryError) {
-      notifications.show({
-        title: 'Inventory Error',
-        message: inventoryError,
-        color: 'red'
-      });
+      showError(inventoryError, 'Inventory Error');
       return;
     }
 
     if (!selectedMemberId) {
-      notifications.show({
-        title: 'Error',
-        message: 'Please select a member',
-        color: 'red'
-      });
+      showWarning('Please select a member');
       return;
     }
 
     const validItems = items.filter(item => item.sacramentId > 0);
     if (validItems.length === 0) {
-      notifications.show({
-        title: 'Error',
-        message: 'Please add at least one item',
-        color: 'red'
-      });
+      showWarning('Please add at least one item');
       return;
     }
 
