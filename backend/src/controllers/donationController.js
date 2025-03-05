@@ -172,7 +172,10 @@ const deleteDonation = async (req, res, next) => {
       );
     }
 
-    // Delete the donation (donation_items will be deleted by CASCADE)
+    // First delete the donation items
+    await connection.query('DELETE FROM donation_items WHERE donation_id = ?', [donationId]);
+
+    // Then delete the donation
     await connection.query('DELETE FROM donations WHERE id = ?', [donationId]);
 
     await connection.commit();

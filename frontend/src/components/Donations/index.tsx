@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, Group, Paper, Text, ActionIcon } from '@mantine/core';
+import { Table, Button, Group, Paper, Text, ActionIcon, LoadingOverlay } from '@mantine/core';
 import { IconTrash } from '@tabler/icons-react';
 import { donations } from '../../services/api';
 import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
@@ -15,6 +15,11 @@ interface Donation {
   created_at: string;
   member_name: string;
   sacrament_names: string;
+  items: Array<{
+    sacrament_name: string;
+    quantity: number;
+    amount: number;
+  }>;
 }
 
 export default function Donations() {
@@ -46,38 +51,60 @@ export default function Donations() {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <Paper shadow="xs" p="md">
-        <Text size="xl" mb="md">Donations</Text>
+    <div>
+      {/* Donation Form at the top */}
+      <Paper shadow="xs" p="md" mb="md">
+        <Text size="xl" mb="md">New Donation</Text>
+        <DonationForm />
+      </Paper>
 
-        {isLoading ? (
-          <Text>Loading donations...</Text>
-        ) : (
-          <Table>
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>Amount</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {donationsList?.map((donation: Donation) => (
-                <tr key={donation.id}>
-                  <td>{donation.member_name}</td>
-                  <td>${donation.total_amount}</td>
-                  <td>{new Date(donation.created_at).toLocaleDateString()}</td>
-                  <td>
-                    <ActionIcon color="red" onClick={() => handleDeleteClick(donation)}>
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </td>
+      {/* Donations List below */}
+      <Paper shadow="xs" p="md">
+        <Text size="xl" mb="md">Donation History</Text>
+        <div style={{ position: 'relative' }}>
+          <LoadingOverlay visible={isLoading} />
+
+          {donationsList?.length === 0 ? (
+            <Text>No donations found</Text>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Member</th>
+                  <th>Payment</th>
+                  <th>Items</th>
+                  <th>Amount</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+              </thead>
+              <tbody>
+                {donationsList?.map((donation: Donation) => (
+                  <tr key={donation.id}>
+                    <td>{new Date(donation.created_at).toLocaleDateString()}</td>
+                    <td>{donation.member_name}</td>
+                    <td>{donation.type}</td>
+                    <td>
+                      {donation.items?.map(item => (
+                        <div key={`${donation.id}-${item.sacrament_name}`}>
+                          {item.quantity}x {item.sacrament_name}
+                        </div>
+                      )) || donation.sacrament_names}
+                    </td>
+                    <td>${parseFloat(donation.total_amount).toFixed(2)}</td>
+                    <td>{donation.notes}</td>
+                    <td>
+                      <ActionIcon color="red" onClick={() => handleDeleteClick(donation)}>
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </div>
       </Paper>
 
       {selectedDonation && (
@@ -90,8 +117,6 @@ export default function Donations() {
           isLoading={deleteMutation.isPending}
         />
       )}
-
-      <DonationForm />
     </div>
   );
 }
