@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS inventory_transfers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     sacrament_id INT,
     quantity INT NOT NULL,
-    type ENUM('in', 'out') NOT NULL,
+    type ENUM('to_active', 'to_storage', 'add_storage') NOT NULL,
     notes TEXT,
     recorded_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

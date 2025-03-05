@@ -201,7 +201,7 @@ export const inventory = {
   recordTransfer: async (data: {
     sacramentId: number;
     quantity: number;
-    type: 'in' | 'out';
+    type: 'to_active' | 'to_storage' | 'add_storage';
     notes?: string;
   }) => {
     const response = await api.post('/api/inventory/transfer', data);

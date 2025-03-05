@@ -29,9 +29,8 @@ const recordTransfer = async (req, res) => {
       // Update quantities based on transfer type
       let newStorage = sacrament[0].num_storage;
       let newActive = sacrament[0].num_active;
-      let transferType = type;
 
-      // Map frontend types to database types
+      // Use the frontend types directly
       if (type === 'to_active') {
         // Check if there's enough in storage
         if (sacrament[0].num_storage < quantity) {
@@ -41,7 +40,6 @@ const recordTransfer = async (req, res) => {
         }
         newStorage -= quantity;
         newActive += quantity;
-        transferType = 'out'; // Map to database enum
       } else if (type === 'to_storage') {
         // Check if there's enough in active
         if (sacrament[0].num_active < quantity) {
@@ -51,20 +49,18 @@ const recordTransfer = async (req, res) => {
         }
         newStorage += quantity;
         newActive -= quantity;
-        transferType = 'in'; // Map to database enum
       } else if (type === 'add_storage') {
         newStorage += quantity;
-        transferType = 'in'; // Map to database enum
       } else {
         await connection.rollback();
         connection.release();
         return res.status(400).json({ message: 'Invalid transfer type' });
       }
 
-      // Record the transfer
+      // Record the transfer with the frontend type directly
       await connection.query(
         'INSERT INTO inventory_transfers (sacrament_id, quantity, type, notes, recorded_by) VALUES (?, ?, ?, ?, ?)',
-        [sacramentId, quantity, transferType, notes || null, userId]
+        [sacramentId, quantity, type, notes || null, userId]
       );
 
       // Update sacrament quantities
@@ -83,10 +79,7 @@ const recordTransfer = async (req, res) => {
     }
   } catch (error) {
     console.error('Error in recordTransfer:', error);
-    res.status(500).json({
-      message: 'Error recording transfer',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ message: 'Error recording transfer', error: error.message });
   }
 };
 

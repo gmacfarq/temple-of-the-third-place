@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select, ActionIcon } from '@mantine/core';
+import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select } from '@mantine/core';
 import { members, auth } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../types/api';
-import styles from './Members.module.css';
-import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import MemberSearch from '../Members/MemberSearch';
-import { useNotifications } from '../../hooks/useNotifications';
 
 interface Member {
   id: number;
@@ -40,7 +37,6 @@ export default function Members() {
   });
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
-  const { showSuccess, showError } = useNotifications();
   // Fetch members
   const { data: membersList, isLoading } = useQuery({
     queryKey: ['members'],
@@ -76,33 +72,9 @@ export default function Members() {
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: members.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members'] });
-      showSuccess('Member deleted successfully');
-    },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'Failed to delete member');
-    }
-  });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addMemberMutation.mutate(formData);
-  };
-
-  // Function to cycle through roles
-  const roles = ['member', 'advisor', 'admin'];
-  const cycleRole = (direction: 'up' | 'down') => {
-    const currentIndex = roles.indexOf(formData.role);
-    let newIndex;
-    if (direction === 'up') {
-      newIndex = currentIndex === 0 ? roles.length - 1 : currentIndex - 1;
-    } else {
-      newIndex = currentIndex === roles.length - 1 ? 0 : currentIndex + 1;
-    }
-    setFormData({ ...formData, role: roles[newIndex] as UserRole });
   };
 
   // Only render if user is admin

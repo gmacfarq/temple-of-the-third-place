@@ -7,7 +7,6 @@ import { useNotifications } from '../../hooks/useNotifications';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showError, showSuccess } = useNotifications();
@@ -18,8 +17,9 @@ export default function Login() {
       await login(email, password);
       showSuccess('Login successful');
       navigate('/members');
-    } catch (error) {
-      showError('Invalid email or password');
+    } catch (error: Error | unknown) {
+      const message = error instanceof Error ? error.message : 'Invalid email or password';
+      showError(message);
     }
   };
 
@@ -34,7 +34,6 @@ export default function Login() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            error={error}
           />
           <PasswordInput
             label="Password"

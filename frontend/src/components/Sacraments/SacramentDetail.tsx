@@ -8,25 +8,22 @@ import {
   Button,
   Stack,
   LoadingOverlay,
-  Modal,
   TextInput,
   NumberInput,
   Select,
   Textarea,
-  ActionIcon
 } from '@mantine/core';
 import { useParams, useNavigate } from 'react-router-dom';
 import { sacraments } from '../../services/api';
-import { IconChevronUp, IconChevronDown } from '@tabler/icons-react';
-import styles from '../Members/Members.module.css';
 import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
+import { useNotifications } from '../../hooks/useNotifications';
 
 type SacramentType = 'chocolate' | 'dried_fruit' | 'capsule' | 'gummy' | 'psily_tart' | 'tincture' | 'other';
 
 interface Sacrament {
   id: number;
   name: string;
-  type: string;
+  type: SacramentType;
   strain: string;
   description: string;
   num_storage: number;
@@ -41,6 +38,7 @@ export default function SacramentDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editedFields, setEditedFields] = useState<Partial<Sacrament> | null>(null);
+  const { showSuccess, showError } = useNotifications();
 
   const { data: sacrament, isLoading, error } = useQuery<Sacrament>({
     queryKey: ['sacrament', id],
@@ -59,7 +57,11 @@ export default function SacramentDetail() {
       queryClient.invalidateQueries({ queryKey: ['sacrament', id] });
       setIsEditing(false);
       setEditedFields(null);
+      showSuccess('Sacrament updated successfully');
     },
+    onError: (error) => {
+      showError('Failed to update sacrament: ' + (error as Error).message);
+    }
   });
 
   const deleteMutation = useMutation({
@@ -67,22 +69,12 @@ export default function SacramentDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacraments'] });
       navigate('/sacraments');
+      showSuccess('Sacrament deleted successfully');
     },
-  });
-
-  const types: SacramentType[] = ['chocolate', 'dried_fruit', 'capsule', 'gummy', 'psily_tart', 'tincture', 'other'];
-
-  const cycleType = (direction: 'up' | 'down') => {
-    if (!editedFields) return;
-    const currentIndex = types.indexOf(editedFields.type as SacramentType);
-    let newIndex;
-    if (direction === 'up') {
-      newIndex = currentIndex === 0 ? types.length - 1 : currentIndex - 1;
-    } else {
-      newIndex = currentIndex === types.length - 1 ? 0 : currentIndex + 1;
+    onError: (error) => {
+      showError('Failed to delete sacrament: ' + (error as Error).message);
     }
-    setEditedFields({ ...editedFields, type: types[newIndex] });
-  };
+  });
 
   const handleEdit = () => {
     if (isEditing) {
@@ -93,7 +85,8 @@ export default function SacramentDetail() {
     setIsEditing(!isEditing);
   };
 
-  const handleSave = () => {
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent default form submission
     if (!editedFields) return;
     updateMutation.mutate(editedFields);
   };
@@ -103,7 +96,9 @@ export default function SacramentDetail() {
   if (!sacrament) return <Text>Sacrament not found</Text>;
 
   return (
-    <>
+    <div style={{ position: 'relative' }}>
+      <LoadingOverlay visible={isLoading || updateMutation.isPending || deleteMutation.isPending} />
+
       <Paper shadow="xs" p="xl">
         <Stack gap="md">
           <Group justify="space-between">
@@ -127,32 +122,28 @@ export default function SacramentDetail() {
 
           <Stack gap="md">
             {isEditing ? (
-              <>
+              <form onSubmit={handleSave}>
                 <TextInput
                   label="Name"
                   value={editedFields?.name}
                   onChange={(e) => setEditedFields({ ...editedFields!, name: e.target.value })}
+                  required
                 />
 
                 <Select
-                  className={styles.selectWrapper}
                   label="Type"
                   value={editedFields?.type}
-                  onChange={(value) => setEditedFields({ ...editedFields!, type: value as string })}
-                  data={types.map(type => ({ value: type, label: type.replace('_', ' ') }))}
-                  rightSectionWidth={80}
-                  rightSection={
-                    <Group gap={0}>
-                      <ActionIcon onClick={(e) => { e.stopPropagation(); cycleType('up'); }}>
-                        <IconChevronUp size={24} />
-                      </ActionIcon>
-                      <ActionIcon onClick={(e) => { e.stopPropagation(); cycleType('down'); }}>
-                        <IconChevronDown size={24} />
-                      </ActionIcon>
-                    </Group>
-                  }
-                  styles={{ input: { cursor: 'default' } }}
-                  readOnly
+                  onChange={(value) => setEditedFields({ ...editedFields!, type: value as SacramentType })}
+                  data={[
+                    { value: 'chocolate', label: 'Chocolate' },
+                    { value: 'dried_fruit', label: 'Dried Fruit' },
+                    { value: 'capsule', label: 'Capsule' },
+                    { value: 'gummy', label: 'Gummy' },
+                    { value: 'psily_tart', label: 'Psily Tart' },
+                    { value: 'tincture', label: 'Tincture' },
+                    { value: 'other', label: 'Other' }
+                  ]}
+                  required
                 />
 
                 <TextInput
@@ -174,12 +165,15 @@ export default function SacramentDetail() {
                   min={0}
                 />
 
-                <Group justify="flex-end" mt="xl">
-                  <Button onClick={handleSave} loading={updateMutation.isPending}>
+                <Group justify="flex-end" mt="md">
+                  <Button variant="outline" onClick={() => setIsEditing(false)} type="button">
+                    Cancel
+                  </Button>
+                  <Button type="submit">
                     Save Changes
                   </Button>
                 </Group>
-              </>
+              </form>
             ) : (
               <>
                 <Text size="lg"><strong>Type:</strong> {sacrament.type}</Text>
@@ -212,6 +206,6 @@ export default function SacramentDetail() {
         message={`Are you sure you want to delete ${sacrament.name}?`}
         isLoading={deleteMutation.isPending}
       />
-    </>
+    </div>
   );
 }

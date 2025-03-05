@@ -54,7 +54,7 @@ export default function SacramentForm() {
     <Paper shadow="xs" p="md">
       <Title order={2} mb="md">Add New Sacrament</Title>
       <form onSubmit={handleSubmit}>
-        <Stack spacing="md">
+        <Stack gap="md">
           <TextInput
             label="Name"
             value={formData.name}
@@ -106,7 +106,7 @@ export default function SacramentForm() {
             required
           />
 
-          <Group position="right">
+          <Group justify="flex-end">
             <Button type="submit" loading={addSacramentMutation.isPending}>
               Add Sacrament
             </Button>

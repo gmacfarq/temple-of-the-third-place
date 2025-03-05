@@ -1,4 +1,4 @@
-import { Table, Group, Text, ActionIcon, Paper, Stack, NumberInput, Button } from '@mantine/core';
+import { Table, Group, Text, ActionIcon, Paper, Stack, NumberInput, } from '@mantine/core';
 import { IconChevronUp, IconChevronDown, IconPlus } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventory } from '../../services/api';
