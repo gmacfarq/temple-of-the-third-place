@@ -58,7 +58,7 @@ export const auth = {
 
 export const members = {
   getAll: async () => {
-    const response = await api.get('/api/auth/users');
+    const response = await api.get('/api/members');
     return response.data;
   },
   create: async (data: { firstName: string; lastName: string; email: string }) => {

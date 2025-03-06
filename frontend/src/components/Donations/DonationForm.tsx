@@ -235,7 +235,7 @@ export default function DonationForm() {
               <Group grow>
                 <div>
                   <Text weight={500} size="sm" mb={5}>Member</Text>
-                  <Select
+        <Select
                     placeholder="Select member"
                     data={membersList?.map(member => ({
                       value: member.id.toString(),
@@ -308,11 +308,11 @@ export default function DonationForm() {
                     </div>
 
                     <ActionIcon
-                      color="red"
+                        color="red"
                       onClick={() => removeItem(index)}
                       disabled={items.length <= 1}
                       style={{ marginBottom: '8px' }}
-                    >
+                      >
                       <IconTrash size={16} />
                     </ActionIcon>
                   </Group>
@@ -348,7 +348,7 @@ export default function DonationForm() {
                   prefix={discountType === 'amount' ? '$' : ''}
                   suffix={discountType === 'percent' ? '%' : ''}
                 />
-              </Group>
+                </Group>
 
               <Textarea
                 label="Notes"
@@ -364,7 +364,7 @@ export default function DonationForm() {
                     <Text>Discount: -${calculateDiscount().toFixed(2)}</Text>
                   )}
                   <Text weight={700} size="lg">Total: ${calculateTotal().toFixed(2)}</Text>
-                </Stack>
+              </Stack>
 
                 <Group>
                   <Button
@@ -374,16 +374,16 @@ export default function DonationForm() {
                     Reset Form
                   </Button>
 
-                  <Button
+            <Button
                     type="submit"
                     loading={donationMutation.isPending}
                     disabled={!selectedMemberId || items.some(item => !item.sacramentId) || !!inventoryError}
-                  >
+            >
                     Record Donation
-                  </Button>
+            </Button>
                 </Group>
               </Group>
-            </Stack>
+      </Stack>
           </form>
         </Grid.Col>
 

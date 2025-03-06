@@ -1,82 +1,82 @@
 import { useQuery } from '@tanstack/react-query';
-import { Paper, Text, Group, Stack, Button, Badge } from '@mantine/core';
+import { Table, Text, Paper, Title, Button, Group, LoadingOverlay } from '@mantine/core';
 import { members } from '../../services/api';
-import { memo } from 'react';
 
-interface Member {
+interface RecentCheckInsProps {
+  onSelectMember: (memberId: number) => void;
+}
+
+interface CheckIn {
   id: number;
   first_name: string;
   last_name: string;
-  last_check_in: string;
+  timestamp: string; // This might be called timestamp instead of check_in_time
+  member_id?: number; // This might be called user_id in the API response
 }
 
-interface RecentCheckInsProps {
-  onSelectMember: (memberId: number | null) => void;  // Updated to allow null
-  selectedMemberId: number | null;
-}
-
-export default memo(function RecentCheckIns({ onSelectMember, selectedMemberId }: RecentCheckInsProps) {
-  const { data: recentCheckIns, isLoading } = useQuery({
-    queryKey: ['recent-checkins'],
+export default function RecentCheckIns({ onSelectMember }: RecentCheckInsProps) {
+  const { data: recentCheckIns, isLoading, error } = useQuery({
+    queryKey: ['members', 'recent-checkins'],
     queryFn: members.getRecentCheckIns,
-    refetchInterval: 30000
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Format date to show time if today, or date and time if older
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  if (isLoading) {
+    return <LoadingOverlay visible={true} />;
+  }
 
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
+  if (error) {
+    return <Text color="red">Error loading recent check-ins: {(error as Error).message}</Text>;
+  }
+
+  if (!recentCheckIns || recentCheckIns.length === 0) {
+    return <Text>No recent check-ins found.</Text>;
+  }
+
+  // Format date safely
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Unknown';
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+
+      return date.toLocaleString();
+    } catch (e) {
+      console.error('Error formatting date:', e);
       return 'Invalid date';
-    }
-
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === date.toDateString();
-
-    if (isToday) {
-      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (isYesterday) {
-      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    } else {
-      return `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
   };
 
-  if (isLoading) {
-    return <Text>Loading recent check-ins...</Text>;
-  }
-
-  if (!recentCheckIns?.length) {
-    return <Text color="dimmed">No recent check-ins today</Text>;
-  }
-
   return (
-    <Paper withBorder p="xs">
-      <Stack gap="xs">
-        {recentCheckIns.map((member: Member) => (
-          <Group key={member.id} justify="apart">
-            <Group gap="xs">
-              <Text size="sm">
-                {member.first_name} {member.last_name}
-              </Text>
-              <Badge size="sm">
-                {formatDate(member.last_check_in)}
-              </Badge>
-            </Group>
-            <Button
-              size="xs"
-              variant={selectedMemberId === member.id ? "filled" : "light"}
-              onClick={() => {
-                onSelectMember(selectedMemberId === member.id ? null : member.id);
-              }}
-            >
-              {selectedMemberId === member.id ? "Unselect" : "Select"}
-            </Button>
-          </Group>
-        ))}
-      </Stack>
+    <Paper shadow="xs" p="md" withBorder>
+      <Title order={4} mb="md">Recent Check-ins</Title>
+      <Table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Check-in Time</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentCheckIns.map((checkin: CheckIn) => (
+            <tr key={checkin.id}>
+              <td>{checkin.first_name} {checkin.last_name}</td>
+              <td>{formatDate(checkin.timestamp || checkin.last_check_in)}</td>
+              <td>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  onClick={() => onSelectMember(checkin.member_id || checkin.id)}
+                >
+                  Select
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
     </Paper>
   );
-});
+}
