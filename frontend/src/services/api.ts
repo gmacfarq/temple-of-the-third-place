@@ -22,6 +22,19 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 interface SubscriptionData {
   status: 'active' | 'expired' | 'pending';
   expiryDate: string;
@@ -52,6 +65,10 @@ export const auth = {
       role: data.role
     };
     const response = await api.post('/api/auth/register-privileged', requestData);
+    return response.data;
+  },
+  getCurrentUser: async () => {
+    const response = await api.get('/api/auth/me');
     return response.data;
   }
 };

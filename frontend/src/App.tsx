@@ -24,7 +24,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
       staleTime: 5 * 60 * 1000, // Data remains fresh for 5 minutes
       retry: 1, // Only retry failed requests once
-      cacheTime: 10 * 60 * 1000, // Cache data for 10 minutes
+      gcTime: 10 * 60 * 1000, // Cache data for 10 minutes
     },
   },
 });
