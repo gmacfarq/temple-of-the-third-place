@@ -16,6 +16,7 @@ import { Notifications } from '@mantine/notifications';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import MemberForm from './components/Members/MemberForm';
 
 // Configure QueryClient with optimized settings
 const queryClient = new QueryClient({
@@ -47,6 +48,7 @@ export default function App() {
                 <Route element={<ProtectedRoute />}>
                   <Route element={<Layout />}>
                     <Route path="/members" element={<Members />} />
+                    <Route path="/members/add" element={<MemberForm />} />
                     <Route path="/members/:id" element={<MemberDetails />} />
                     <Route path="/sacraments" element={<Sacraments />} />
                     <Route path="/sacraments/new" element={<SacramentForm />} />

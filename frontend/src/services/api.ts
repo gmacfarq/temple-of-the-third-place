@@ -135,6 +135,25 @@ export const members = {
     const response = await api.get('/api/members/recent-checkins');
     return response.data;
   },
+  updateProfile: async (id: number, data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    birthDate?: string;
+    phoneNumber?: string;
+    membershipType?: 'Exploratory' | 'Starter' | 'Lovely';
+  }) => {
+    const response = await api.put(`/api/members/${id}`, data);
+    return response.data;
+  },
+  updateMembership: async (id: number, data: {
+    membershipType: 'Exploratory' | 'Starter' | 'Lovely';
+    membershipStatus: 'Pending' | 'Active' | 'Expired';
+    expirationDate?: string;
+  }) => {
+    const response = await api.put(`/api/members/${id}/membership`, data);
+    return response.data;
+  }
 };
 
 export const sacraments = {

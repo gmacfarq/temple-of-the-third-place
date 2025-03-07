@@ -1,19 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select } from '@mantine/core';
+import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select, Badge } from '@mantine/core';
 import { members, auth } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../types/api';
 import { useNavigate } from 'react-router-dom';
-import MemberSearch from '../Members/MemberSearch';
-
-interface Member {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: string;
-}
+import MemberSearch from './MemberSearch';
+import { Member } from '../../types/member';
 
 // Add role type
 type UserRole = 'member' | 'advisor' | 'admin';
@@ -37,11 +30,19 @@ export default function Members() {
   });
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
+
   // Fetch members
-  const { data: membersList, isLoading } = useQuery({
+  const { data: membersList, isLoading, error } = useQuery({
     queryKey: ['members'],
     queryFn: members.getAll
   });
+
+  // Set filtered members when membersList changes
+  useEffect(() => {
+    if (membersList) {
+      setFilteredMembers(membersList);
+    }
+  }, [membersList]);
 
   // Add member mutation
   const addMemberMutation = useMutation({
@@ -66,7 +67,7 @@ export default function Members() {
   });
 
   const checkInMutation = useMutation({
-    mutationFn: members.checkIn,
+    mutationFn: (memberId: number) => members.checkIn(memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
     }
@@ -77,10 +78,38 @@ export default function Members() {
     addMemberMutation.mutate(formData);
   };
 
+  // Function to render membership status badge
+  const renderStatusBadge = (status: string) => {
+    let color = 'blue';
+
+    switch (status) {
+      case 'Active':
+        color = 'green';
+        break;
+      case 'Pending':
+        color = 'yellow';
+        break;
+      case 'Expired':
+        color = 'red';
+        break;
+    }
+
+    return <Badge color={color}>{status}</Badge>;
+  };
+
+  // Function to format date
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
   // Only render if user is admin
   if (user?.role !== 'admin') {
     return <Text>You don't have permission to view this page.</Text>;
   }
+
+  if (isLoading) return <LoadingOverlay visible={true} />;
+  if (error) return <Text c="red">Error loading members: {(error as ApiError).message}</Text>;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -128,23 +157,32 @@ export default function Members() {
         </form>
       </Paper>
 
-      {/* Search Component */}
-      <MemberSearch
-        members={membersList || []}
-        onFilteredMembersChange={setFilteredMembers}
-      />
+      {/* Member Search */}
+      {membersList && (
+        <MemberSearch
+          members={membersList}
+          onFilteredMembersChange={setFilteredMembers}
+        />
+      )}
 
       {/* Members List */}
       <Paper shadow="xs" p="md">
-        <Group justify="apart" mb="md">
+        <Group justify="space-between" mb="md">
           <Text size="xl">Members</Text>
+          {user?.role === 'admin' && (
+            <Button onClick={() => navigate('/members/add')}>
+              Add Member
+            </Button>
+          )}
         </Group>
         <Table>
           <thead>
             <tr>
               <th>Name</th>
               <th>Email</th>
-              <th>Role</th>
+              <th>Membership Type</th>
+              <th>Status</th>
+              <th>Expiration</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -153,7 +191,9 @@ export default function Members() {
               <tr key={member.id}>
                 <td>{member.first_name} {member.last_name}</td>
                 <td>{member.email}</td>
-                <td>{member.role}</td>
+                <td>{member.membership_type || 'Exploratory'}</td>
+                <td>{renderStatusBadge(member.membership_status || 'Pending')}</td>
+                <td>{formatDate(member.membership_expiration)}</td>
                 <td>
                   <Group>
                     <Button

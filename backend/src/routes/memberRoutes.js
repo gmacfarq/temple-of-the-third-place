@@ -12,7 +12,8 @@ const {
   getCheckIns,
   checkIn,
   deleteCheckIn,
-  getRecentCheckIns
+  getRecentCheckIns,
+  updateMembership
 } = require('../controllers/memberController');
 
 // Place this BEFORE any routes with :id parameter
@@ -35,6 +36,9 @@ router.put('/:id/checkin', auth, checkIn);
 
 // PUT /api/members/:id/subscription - Update member subscription (admin only)
 router.put('/:id/subscription', auth, checkRole(['admin']), updateSubscription);
+
+// PUT /api/members/:id/membership - Update member membership details (admin only)
+router.put('/:id/membership', auth, checkRole(['admin']), updateMembership);
 
 // DELETE /api/members/:id - Delete member (admin only)
 router.delete('/:id', auth, checkRole(['admin']), deleteMember);

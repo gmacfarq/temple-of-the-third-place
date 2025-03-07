@@ -2,52 +2,49 @@ import { TextInput, Group, Select, Stack, Paper } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { useState, useEffect } from 'react';
 import styles from '../Members/Members.module.css';
-
-interface Member {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: string;
-  phone?: string;
-}
+import { Member } from '../../types/member';
 
 interface MemberSearchProps {
   members: Member[];
-  onFilteredMembersChange?: (members: Member[]) => void;
-  showRoleFilter?: boolean;
+  onFilteredMembersChange: (members: Member[]) => void;
+  showMembershipFilter?: boolean;
   placeholder?: string;
 }
 
 export default function MemberSearch({
   members,
   onFilteredMembersChange,
-  showRoleFilter = true,
+  showMembershipFilter = true,
   placeholder = "Search by name, email, or phone number"
 }: MemberSearchProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [membershipFilter, setMembershipFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    const filteredMembers = members?.filter((member: Member) => {
-      const matchesRole = !roleFilter || member.role === roleFilter;
+    if (!members) {
+      onFilteredMembersChange([]);
+      return;
+    }
 
-      if (!searchQuery) return matchesRole;
+    const filteredMembers = members.filter((member: Member) => {
+      const matchesMembership = !membershipFilter || member.membership_type === membershipFilter;
+
+      if (!searchQuery) return matchesMembership;
 
       const searchLower = searchQuery.toLowerCase();
 
       if (/^\d+$/.test(searchQuery)) {
-        return matchesRole && member.phone?.replace(/\D/g, '').includes(searchQuery);
+        return matchesMembership && member.phone_number?.replace(/\D/g, '').includes(searchQuery);
       }
 
-      return matchesRole && (
+      return matchesMembership && (
         `${member.first_name} ${member.last_name}`.toLowerCase().includes(searchLower) ||
         member.email.toLowerCase().includes(searchLower)
       );
     });
 
-    onFilteredMembersChange?.(filteredMembers || []);
-  }, [searchQuery, roleFilter, members, onFilteredMembersChange]);
+    onFilteredMembersChange(filteredMembers);
+  }, [searchQuery, membershipFilter, members, onFilteredMembersChange]);
 
   return (
     <Paper shadow="xs" p="md" mb="md">
@@ -59,17 +56,17 @@ export default function MemberSearch({
             onChange={(e) => setSearchQuery(e.target.value)}
             leftSection={<IconSearch size={16} />}
           />
-          {showRoleFilter && (
+          {showMembershipFilter && (
             <Select
               className={styles.selectWrapper}
-              placeholder="Filter by role"
-              value={roleFilter}
-              onChange={setRoleFilter}
+              placeholder="Filter by membership"
+              value={membershipFilter}
+              onChange={setMembershipFilter}
               data={[
                 { value: '', label: 'All' },
-                { value: 'member', label: 'Members' },
-                { value: 'advisor', label: 'Advisors' },
-                { value: 'admin', label: 'Admins' }
+                { value: 'Exploratory', label: 'Exploratory' },
+                { value: 'Starter', label: 'Starter' },
+                { value: 'Lovely', label: 'Lovely' }
               ]}
               clearable
             />

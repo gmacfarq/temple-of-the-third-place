@@ -1,10 +1,14 @@
 const pool = require('../config/database');
+const { ValidationError } = require('../utils/errors');
 
 const getAllMembers = async (req, res) => {
   try {
     const connection = await pool.getConnection();
     const [members] = await connection.query(
-      'SELECT id, email, first_name, last_name, role, subscription_status, last_check_in FROM users WHERE role = "member"'
+      `SELECT id, email, first_name, last_name, role,
+      membership_type, membership_status, birth_date,
+      phone_number, membership_expiration, last_check_in
+      FROM users WHERE role = "member"`
     );
     connection.release();
     res.json(members);
@@ -18,7 +22,10 @@ const getMemberById = async (req, res) => {
   try {
     const connection = await pool.getConnection();
     const [member] = await connection.query(
-      'SELECT id, email, first_name, last_name, role, subscription_status, last_check_in FROM users WHERE id = ?',
+      `SELECT id, email, first_name, last_name, role,
+      membership_type, membership_status, birth_date,
+      phone_number, membership_expiration, last_check_in
+      FROM users WHERE id = ?`,
       [req.params.id]
     );
     connection.release();
@@ -36,7 +43,15 @@ const getMemberById = async (req, res) => {
 
 const updateMemberProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      birthDate,
+      phoneNumber,
+      membershipType
+    } = req.body;
+
     const connection = await pool.getConnection();
 
     // Check if member exists
@@ -50,13 +65,56 @@ const updateMemberProfile = async (req, res) => {
       return res.status(404).json({ message: 'Member not found' });
     }
 
+    // Calculate age to determine membership status
+    let membershipStatus = 'Active';
+    if (birthDate) {
+      const birthDateObj = new Date(birthDate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDateObj.getFullYear();
+      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+        age--;
+      }
+
+      if (age < 21) {
+        membershipStatus = 'Pending';
+      }
+    }
+
+    // Calculate membership expiration (1 year from now)
+    const expirationDate = new Date();
+    expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
     await connection.query(
-      'UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?',
-      [firstName, lastName, email, req.params.id]
+      `UPDATE users SET
+      first_name = ?,
+      last_name = ?,
+      email = ?,
+      birth_date = ?,
+      phone_number = ?,
+      membership_type = ?,
+      membership_status = ?,
+      membership_expiration = ?
+      WHERE id = ?`,
+      [
+        firstName,
+        lastName,
+        email,
+        birthDate || null,
+        phoneNumber || null,
+        membershipType || 'Exploratory',
+        membershipStatus,
+        expirationDate.toISOString().split('T')[0],
+        req.params.id
+      ]
     );
     connection.release();
 
-    res.json({ message: 'Member profile updated successfully' });
+    res.json({
+      message: 'Member profile updated successfully',
+      membershipStatus
+    });
   } catch (error) {
     console.error('Error in updateMemberProfile:', error);
     res.status(500).json({ message: 'Error updating member profile' });
@@ -290,6 +348,44 @@ const getRecentCheckIns = async (req, res) => {
   }
 };
 
+const updateMembership = async (req, res) => {
+  try {
+    const { membershipType, membershipStatus, expirationDate } = req.body;
+    const connection = await pool.getConnection();
+
+    // Check if member exists
+    const [existingMember] = await connection.query(
+      'SELECT id FROM users WHERE id = ? AND role = "member"',
+      [req.params.id]
+    );
+
+    if (existingMember.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    await connection.query(
+      `UPDATE users SET
+      membership_type = ?,
+      membership_status = ?,
+      membership_expiration = ?
+      WHERE id = ?`,
+      [
+        membershipType,
+        membershipStatus,
+        expirationDate,
+        req.params.id
+      ]
+    );
+    connection.release();
+
+    res.json({ message: 'Membership details updated successfully' });
+  } catch (error) {
+    console.error('Error in updateMembership:', error);
+    res.status(500).json({ message: 'Error updating membership details' });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -301,5 +397,6 @@ module.exports = {
   getCheckIns,
   checkIn,
   deleteCheckIn,
-  getRecentCheckIns
+  getRecentCheckIns,
+  updateMembership
 };

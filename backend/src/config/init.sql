@@ -18,7 +18,12 @@ CREATE TABLE users (
     subscription_status ENUM('none', 'active', 'expired') DEFAULT 'none',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_check_in TIMESTAMP NULL,
-    INDEX idx_email (email)
+    INDEX idx_email (email),
+    membership_type ENUM('Exploratory', 'Starter', 'Lovely') DEFAULT 'Exploratory',
+    membership_status ENUM('Pending', 'Active', 'Expired') DEFAULT 'Pending',
+    birth_date DATE,
+    phone_number VARCHAR(20),
+    membership_expiration DATE
 );
 
 -- Sacraments
