@@ -5,71 +5,115 @@ const pool = require('../config/database');
 
 const register = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    const {
+      firstName,
+      lastName,
+      email,
+      password = 'DefaultPass123!', // Default password if not provided
+      birthDate,
+      phoneNumber,
+      membershipType = 'Exploratory'
+    } = req.body;
+
+    // Validate input
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ message: 'First name, last name, and email are required' });
     }
 
     const connection = await pool.getConnection();
 
-    try {
-      const [existingUser] = await connection.query(
-        'SELECT id FROM users WHERE email = ?',
-        [req.body.email]
-      );
+    // Check if user already exists
+    const [existingUser] = await connection.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
 
-      if (existingUser.length > 0) {
-        connection.release();
-        return res.status(400).json({ message: 'User already exists' });
-      }
-
-      let hashedPassword;
-      try {
-        hashedPassword = await bcrypt.hash(req.body.password, 10);
-      } catch (hashError) {
-        console.error('Error during password hashing:', hashError);
-        throw hashError;
-      }
-
-      try {
-        const [result] = await connection.query(
-          'INSERT INTO users (email, password_hash, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)',
-          [req.body.email, hashedPassword, req.body.firstName, req.body.lastName, 'member']
-        );
-        connection.release();
-
-        const token = jwt.sign(
-          { userId: result.insertId, email: req.body.email, role: 'member' },
-          process.env.JWT_SECRET,
-          { expiresIn: process.env.JWT_EXPIRES_IN }
-        );
-
-        return res.status(201).json({
-          message: 'User registered successfully',
-          token,
-          user: {
-            id: result.insertId,
-            email: req.body.email,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            role: 'member'
-          }
-        });
-      } catch (insertError) {
-        console.error('Database insert error:', insertError);
-        throw insertError;
-      }
-    } catch (error) {
-      console.error('Operation error:', error);
+    if (existingUser.length > 0) {
       connection.release();
-      throw error;
+      return res.status(409).json({ message: 'User with this email already exists' });
     }
-  } catch (error) {
-    console.error('Global registration error:', error);
-    return res.status(500).json({
-      message: 'Error registering user',
-      error: error.message
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Calculate membership status based on age
+    let membershipStatus = 'Active';
+    if (birthDate) {
+      const birthDateObj = new Date(birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDateObj.getFullYear();
+      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+        age--;
+      }
+
+      if (age < 21) {
+        membershipStatus = 'Pending';
+      }
+    }
+
+    // Calculate membership expiration (1 year from now)
+    const expirationDate = new Date();
+    expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+    const formattedExpirationDate = expirationDate.toISOString().split('T')[0];
+
+    // Insert new user
+    const [result] = await connection.query(
+      `INSERT INTO users (
+        first_name,
+        last_name,
+        email,
+        password_hash,
+        role,
+        birth_date,
+        phone_number,
+        membership_type,
+        membership_status,
+        membership_expiration
+      ) VALUES (?, ?, ?, ?, 'member', ?, ?, ?, ?, ?)`,
+      [
+        firstName,
+        lastName,
+        email,
+        passwordHash,
+        birthDate || null,
+        phoneNumber || null,
+        membershipType,
+        membershipStatus,
+        membershipStatus === 'Active' ? formattedExpirationDate : null
+      ]
+    );
+
+    const userId = result.insertId;
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId, email, role: 'member' },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    connection.release();
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: userId,
+        email,
+        firstName,
+        lastName,
+        role: 'member',
+        birthDate,
+        phoneNumber,
+        membershipType,
+        membershipStatus
+      }
     });
+  } catch (error) {
+    console.error('Error in register:', error);
+    res.status(500).json({ message: 'Error registering user' });
   }
 };
 

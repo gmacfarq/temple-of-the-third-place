@@ -56,7 +56,7 @@ const updateMemberProfile = async (req, res) => {
 
     // Check if member exists
     const [existingMember] = await connection.query(
-      'SELECT id FROM users WHERE id = ? AND role = "member"',
+      'SELECT id FROM users WHERE id = ?',
       [req.params.id]
     );
 
@@ -70,7 +70,7 @@ const updateMemberProfile = async (req, res) => {
     if (birthDate) {
       const birthDateObj = new Date(birthDate);
       const today = new Date();
-      const age = today.getFullYear() - birthDateObj.getFullYear();
+      let age = today.getFullYear() - birthDateObj.getFullYear();
       const monthDiff = today.getMonth() - birthDateObj.getMonth();
 
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {

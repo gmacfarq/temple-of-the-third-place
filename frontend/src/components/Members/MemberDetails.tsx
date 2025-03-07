@@ -14,7 +14,6 @@ import {
   Badge,
   Divider,
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
 import { members } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
@@ -46,11 +45,25 @@ export default function MemberDetails() {
 
   useEffect(() => {
     if (member) {
+      const birthDate = member.birth_date || '';
+      let formattedDate = '';
+
+      if (birthDate) {
+        // Handle ISO date format (1999-05-24T00:00:00.000Z)
+        const dateObj = new Date(birthDate);
+        const year = dateObj.getUTCFullYear().toString();
+        const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, '0');
+        const day = dateObj.getUTCDate().toString().padStart(2, '0');
+
+        // Format as YYYY-MM-DD for the form
+        formattedDate = `${year}-${month}-${day}`;
+      }
+
       setFormData({
         firstName: member.first_name,
         lastName: member.last_name,
         email: member.email,
-        birthDate: member.birth_date || '',
+        birthDate: formattedDate,
         phoneNumber: member.phone_number || '',
         membershipType: member.membership_type || 'Exploratory'
       });
@@ -114,7 +127,16 @@ export default function MemberDetails() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+
+    // Handle timezone offset properly
+    const date = new Date(dateString);
+
+    // Use UTC methods to avoid timezone issues
+    const year = date.getUTCFullYear();
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = date.getUTCDate().toString().padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   };
 
   if (isLoading) return <LoadingOverlay visible={true} />;

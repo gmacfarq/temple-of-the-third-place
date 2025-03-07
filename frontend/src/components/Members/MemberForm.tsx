@@ -9,7 +9,6 @@ import {
   Stack,
   Select
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../../services/api';
 import { useNotifications } from '../../hooks/useNotifications';

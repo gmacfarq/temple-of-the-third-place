@@ -46,14 +46,15 @@ export const auth = {
     const response = await api.post('/api/auth/login', { email, password });
     return response.data;
   },
-  register: async (data: { firstName: string; lastName: string; email: string }) => {
-    const requestData = {
-      email: data.email.toLowerCase().trim(),
-      firstName: data.firstName.trim(),
-      lastName: data.lastName.trim(),
-      password: 'DefaultPass123!'
-    };
-    const response = await api.post('/api/auth/register', requestData);
+  register: async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    birthDate?: string;
+    phoneNumber?: string;
+    membershipType?: string;
+  }) => {
+    const response = await api.post('/api/auth/register', data);
     return response.data;
   },
   registerPrivileged: async (data: { firstName: string; lastName: string; email: string; role: string }) => {
