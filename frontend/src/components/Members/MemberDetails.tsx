@@ -51,11 +51,20 @@ export default function MemberDetails() {
     queryFn: () => members.getById(Number(id))
   });
 
-  const { data: checkIns } = useQuery({
+  const { data: checkIns, refetch: refetchCheckIns } = useQuery({
     queryKey: ['member-checkins', id],
     queryFn: () => members.getCheckIns(Number(id)),
-    enabled: !!id
+    enabled: !!id,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      refetchCheckIns();
+    }
+  }, [id, refetchCheckIns]);
 
   useEffect(() => {
     if (member) {
@@ -127,6 +136,7 @@ export default function MemberDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['member', id] });
       queryClient.invalidateQueries({ queryKey: ['member-checkins', id] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
       showSuccess('Member checked in successfully');
     },
     onError: (error: ApiError) => {
