@@ -2,23 +2,27 @@ const pool = require('../config/database');
 
 const getAllSacraments = async (req, res) => {
   try {
-    console.log('Getting all sacraments...');
     const connection = await pool.getConnection();
-    console.log('Database connection established');
-
-    const [sacraments] = await connection.query(
-      'SELECT id, name, type, strain, description, num_storage, num_active, suggested_donation FROM sacraments'
-    );
-    console.log('Query executed, results:', sacraments);
-
+    const [sacraments] = await connection.query(`
+      SELECT
+        s.id,
+        s.name,
+        s.type,
+        s.strain,
+        s.description,
+        s.num_storage,
+        s.num_active,
+        s.suggested_donation,
+        s.low_inventory_threshold,
+        (s.num_storage + s.num_active) as total_inventory
+      FROM sacraments s
+      ORDER BY s.name
+    `);
     connection.release();
     res.json(sacraments);
   } catch (error) {
     console.error('Error in getAllSacraments:', error);
-    res.status(500).json({
-      message: 'Error fetching sacraments',
-      error: error.message
-    });
+    res.status(500).json({ message: 'Error fetching sacraments' });
   }
 };
 
@@ -44,18 +48,55 @@ const getSacramentById = async (req, res) => {
 
 const createSacrament = async (req, res) => {
   try {
-    const { name, type, strain, description, numStorage, suggestedDonation, batchId } = req.body;
-    const connection = await pool.getConnection();
+    const {
+      name,
+      type,
+      strain,
+      description,
+      numStorage,
+      suggestedDonation,
+      lowInventoryThreshold = 5 // Default to 5 if not provided
+    } = req.body;
 
+    // Validate input
+    if (!name || !type) {
+      return res.status(400).json({ message: 'Name and type are required' });
+    }
+
+    const connection = await pool.getConnection();
     const [result] = await connection.query(
-      'INSERT INTO sacraments (name, type, strain, description, num_storage, suggested_donation, batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, type, strain, description, numStorage, suggestedDonation, batchId]
+      `INSERT INTO sacraments (
+        name,
+        type,
+        strain,
+        description,
+        num_storage,
+        num_active,
+        suggested_donation,
+        low_inventory_threshold
+      ) VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+      [
+        name,
+        type,
+        strain || null,
+        description || null,
+        numStorage || 0,
+        suggestedDonation || 0,
+        lowInventoryThreshold
+      ]
     );
     connection.release();
 
     res.status(201).json({
-      message: 'Sacrament created successfully',
-      sacramentId: result.insertId
+      id: result.insertId,
+      name,
+      type,
+      strain,
+      description,
+      numStorage,
+      numActive: 0,
+      suggestedDonation,
+      lowInventoryThreshold
     });
   } catch (error) {
     console.error('Error in createSacrament:', error);
@@ -65,53 +106,82 @@ const createSacrament = async (req, res) => {
 
 const updateSacrament = async (req, res) => {
   try {
-    const { name, type, strain, description, suggestedDonation } = req.body;
+    const {
+      name,
+      type,
+      strain,
+      description,
+      numStorage,
+      numActive,
+      suggestedDonation,
+      lowInventoryThreshold
+    } = req.body;
+
     const connection = await pool.getConnection();
 
-    // Check if sacrament exists
-    const [existingSacrament] = await connection.query(
-      'SELECT id FROM sacraments WHERE id = ?',
-      [req.params.id]
-    );
-
-    if (existingSacrament.length === 0) {
-      connection.release();
-      return res.status(404).json({ message: 'Sacrament not found' });
-    }
-
-    // Build update query dynamically based on provided fields
-    const updates = [];
-    const values = [];
+    // Build the update query dynamically based on provided fields
+    let updateFields = [];
+    let queryParams = [];
 
     if (name !== undefined) {
-      updates.push('name = ?');
-      values.push(name);
+      updateFields.push('name = ?');
+      queryParams.push(name);
     }
+
     if (type !== undefined) {
-      updates.push('type = ?');
-      values.push(type);
+      updateFields.push('type = ?');
+      queryParams.push(type);
     }
+
     if (strain !== undefined) {
-      updates.push('strain = ?');
-      values.push(strain);
+      updateFields.push('strain = ?');
+      queryParams.push(strain);
     }
+
     if (description !== undefined) {
-      updates.push('description = ?');
-      values.push(description);
+      updateFields.push('description = ?');
+      queryParams.push(description);
     }
+
+    if (numStorage !== undefined) {
+      updateFields.push('num_storage = ?');
+      queryParams.push(numStorage);
+    }
+
+    if (numActive !== undefined) {
+      updateFields.push('num_active = ?');
+      queryParams.push(numActive);
+    }
+
     if (suggestedDonation !== undefined) {
-      updates.push('suggested_donation = ?');
-      values.push(suggestedDonation);
+      updateFields.push('suggested_donation = ?');
+      queryParams.push(suggestedDonation);
     }
 
-    values.push(req.params.id);
+    if (lowInventoryThreshold !== undefined) {
+      updateFields.push('low_inventory_threshold = ?');
+      queryParams.push(lowInventoryThreshold);
+    }
 
-    await connection.query(
-      `UPDATE sacraments SET ${updates.join(', ')} WHERE id = ?`,
-      values
+    if (updateFields.length === 0) {
+      connection.release();
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    // Add the ID parameter
+    queryParams.push(req.params.id);
+
+    const [result] = await connection.query(
+      `UPDATE sacraments SET ${updateFields.join(', ')} WHERE id = ?`,
+      queryParams
     );
 
     connection.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Sacrament not found' });
+    }
+
     res.json({ message: 'Sacrament updated successfully' });
   } catch (error) {
     console.error('Error in updateSacrament:', error);

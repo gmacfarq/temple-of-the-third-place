@@ -173,6 +173,7 @@ export const sacraments = {
     description: string;
     numStorage: number;
     suggestedDonation: number;
+    lowInventoryThreshold: number;
   }) => {
     const response = await api.post('/api/sacraments', data);
     return response.data;
@@ -187,7 +188,9 @@ export const sacraments = {
     strain?: string;
     description?: string;
     numStorage?: number;
+    numActive?: number;
     suggestedDonation?: number;
+    lowInventoryThreshold?: number;
   }) => {
     const response = await api.put(`/api/sacraments/${id}`, data);
     return response.data;

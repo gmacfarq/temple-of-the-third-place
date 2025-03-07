@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS sacraments (
     suggested_donation DECIMAL(10,2),
     batch_id VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_batch (batch_id)
+    INDEX idx_batch (batch_id),
+    low_inventory_threshold INT DEFAULT 5
 );
 
 -- Check-ins

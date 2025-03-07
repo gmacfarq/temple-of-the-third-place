@@ -23,6 +23,7 @@ interface SacramentFormData {
   description: string;
   numStorage: number;
   suggestedDonation: number;
+  lowInventoryThreshold: number;
 }
 
 export default function SacramentForm() {
@@ -35,6 +36,7 @@ export default function SacramentForm() {
     description: '',
     numStorage: 0,
     suggestedDonation: 0,
+    lowInventoryThreshold: 5,
   });
 
   const addSacramentMutation = useMutation({
@@ -103,6 +105,16 @@ export default function SacramentForm() {
             value={formData.suggestedDonation}
             onChange={(value) => setFormData({ ...formData, suggestedDonation: Number(value || 0) })}
             min={0}
+            required
+          />
+
+          <NumberInput
+            label="Low Inventory Threshold"
+            description="Alert when total inventory falls below this number"
+            value={formData.lowInventoryThreshold}
+            onChange={(value) => setFormData({ ...formData, lowInventoryThreshold: value || 5 })}
+            min={0}
+            step={1}
             required
           />
 
