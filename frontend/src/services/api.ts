@@ -120,8 +120,8 @@ export const members = {
     const response = await api.put(`/api/members/${id}/checkin`);
     return response.data;
   },
-  getCheckIns: async (id: number, page: number, perPage: number) => {
-    const response = await api.get(`/api/members/${id}/checkins?page=${page}&per_page=${perPage}`);
+  getCheckIns: async (id: number) => {
+    const response = await api.get(`/api/members/${id}/check-ins`);
     return response.data;
   },
   deleteCheckIn: async (checkInId: number) => {

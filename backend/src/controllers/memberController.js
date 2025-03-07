@@ -247,30 +247,30 @@ const deleteMember = async (req, res) => {
 
 const getCheckIns = async (req, res) => {
   try {
-    const { id } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.per_page) || 5;
-    const offset = (page - 1) * perPage;
-
     const connection = await pool.getConnection();
 
-    const [checkIns] = await connection.query(
-      'SELECT id, timestamp FROM check_ins WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?',
-      [id, perPage, offset]
+    // Check if member exists
+    const [existingMember] = await connection.query(
+      'SELECT id FROM users WHERE id = ?',
+      [req.params.id]
     );
 
-    const [total] = await connection.query(
-      'SELECT COUNT(*) as count FROM check_ins WHERE user_id = ?',
-      [id]
+    if (existingMember.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    // Get check-ins for this member
+    const [checkIns] = await connection.query(
+      `SELECT id, user_id, timestamp
+       FROM check_ins
+       WHERE user_id = ?
+       ORDER BY timestamp DESC`,
+      [req.params.id]
     );
 
     connection.release();
-
-    res.json({
-      data: checkIns,
-      total: total[0].count,
-      totalCheckIns: total[0].count
-    });
+    res.json(checkIns);
   } catch (error) {
     console.error('Error in getCheckIns:', error);
     res.status(500).json({ message: 'Error fetching check-ins' });

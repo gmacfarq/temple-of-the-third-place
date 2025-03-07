@@ -7,6 +7,7 @@ import { ApiError } from '../../types/api';
 import { useNavigate } from 'react-router-dom';
 import MemberSearch from './MemberSearch';
 import { Member } from '../../types/member';
+import { notifications } from '@mantine/notifications';
 
 // Add role type
 type UserRole = 'member' | 'advisor' | 'admin';
@@ -30,11 +31,16 @@ export default function Members() {
   });
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
+  const [checkInId, setCheckInId] = useState<number | null>(null);
 
   // Fetch members
   const { data: membersList, isLoading, error } = useQuery({
     queryKey: ['members'],
-    queryFn: members.getAll
+    queryFn: members.getAll,
+    select: (data) => {
+      // Sort by ID in descending order (higher ID = more recently joined)
+      return [...data].sort((a, b) => b.id - a.id);
+    }
   });
 
   // Set filtered members when membersList changes
@@ -70,6 +76,21 @@ export default function Members() {
     mutationFn: (memberId: number) => members.checkIn(memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
+      notifications.show({
+        title: 'Member checked in successfully',
+        message: 'Member checked in successfully',
+        color: 'green'
+      });
+      setCheckInId(null);
+    },
+    onError: (error: ApiError) => {
+      const errorMessage = error.response?.data?.message || 'Failed to check in member';
+      notifications.show({
+        title: 'Error',
+        message: errorMessage,
+        color: 'red'
+      });
+      setCheckInId(null);
     }
   });
 
@@ -101,6 +122,12 @@ export default function Members() {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Add a handler function for check-ins
+  const handleCheckIn = (memberId: number) => {
+    setCheckInId(memberId);
+    checkInMutation.mutate(memberId);
   };
 
   // Only render if user is admin
@@ -203,15 +230,17 @@ export default function Members() {
                     >
                       View
                     </Button>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      color="green"
-                      onClick={() => checkInMutation.mutate(member.id)}
-                      loading={checkInMutation.isPending}
-                    >
-                      Check In
-                    </Button>
+                    {member.membership_status === 'Active' && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color="green"
+                        onClick={() => handleCheckIn(member.id)}
+                        loading={checkInMutation.isPending && checkInId === member.id}
+                      >
+                        Check In
+                      </Button>
+                    )}
                   </Group>
                 </td>
               </tr>

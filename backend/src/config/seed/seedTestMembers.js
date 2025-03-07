@@ -88,20 +88,6 @@ async function seedTestMembers() {
         member.membershipStatus === 'Active' ? formattedExpirationDate : null
       ]);
 
-      // Get the member's ID for check-ins
-      const [memberResult] = await connection.query(
-        'SELECT id FROM users WHERE email = ?',
-        [member.email]
-      );
-      const memberId = memberResult[0].id;
-
-      // Create some check-ins for this member
-      await connection.query(`
-        INSERT INTO check_ins (user_id, timestamp)
-        VALUES
-          (?, NOW()),
-          (?, DATE_SUB(NOW(), INTERVAL 1 DAY))
-      `, [memberId, memberId]);
     }
 
     console.log('Test members and check-ins seeded successfully');

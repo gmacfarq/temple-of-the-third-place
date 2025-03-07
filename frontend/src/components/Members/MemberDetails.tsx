@@ -13,12 +13,20 @@ import {
   Select,
   Badge,
   Divider,
+  Table,
 } from '@mantine/core';
 import { members } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 import { useNotifications } from '../../hooks/useNotifications';
 import { MemberFormData } from '../../types/member';
+import { ApiError } from '../../types/api';
+
+interface CheckIn {
+  id: number;
+  timestamp: string;
+  user_id: number;
+}
 
 export default function MemberDetails() {
   const { id } = useParams();
@@ -41,6 +49,12 @@ export default function MemberDetails() {
   const { data: member, isLoading } = useQuery({
     queryKey: ['member', id],
     queryFn: () => members.getById(Number(id))
+  });
+
+  const { data: checkIns } = useQuery({
+    queryKey: ['member-checkins', id],
+    queryFn: () => members.getCheckIns(Number(id)),
+    enabled: !!id
   });
 
   useEffect(() => {
@@ -105,6 +119,31 @@ export default function MemberDetails() {
     },
     onError: (error) => {
       showError(`Failed to delete member: ${(error as Error).message}`);
+    }
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: () => members.checkIn(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member', id] });
+      queryClient.invalidateQueries({ queryKey: ['member-checkins', id] });
+      showSuccess('Member checked in successfully');
+    },
+    onError: (error: ApiError) => {
+      const errorMessage = error.response?.data?.message || 'Failed to check in member';
+      showError(errorMessage);
+    }
+  });
+
+  const deleteCheckInMutation = useMutation({
+    mutationFn: (checkInId: number) => members.deleteCheckIn(checkInId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member-checkins', id] });
+      showSuccess('Check-in deleted successfully');
+    },
+    onError: (error: ApiError) => {
+      const errorMessage = error.response?.data?.message || 'Failed to delete check-in';
+      showError(errorMessage);
     }
   });
 
@@ -236,7 +275,6 @@ export default function MemberDetails() {
             <Text><strong>Email:</strong> {member.email}</Text>
             <Text><strong>Birth Date:</strong> {formatDate(member.birth_date)}</Text>
             <Text><strong>Phone:</strong> {member.phone_number || 'Not provided'}</Text>
-            <Text><strong>Last Check-in:</strong> {formatDate(member.last_check_in)}</Text>
 
             <Divider my="sm" />
 
@@ -248,6 +286,17 @@ export default function MemberDetails() {
               }>
                 {member.membership_status || 'Pending'}
               </Badge>
+
+              {member.membership_status === 'Active' && (
+                <Button
+                  size="sm"
+                  color="green"
+                  onClick={() => checkInMutation.mutate()}
+                  loading={checkInMutation.isPending}
+                >
+                  Check In
+                </Button>
+              )}
             </Group>
 
             <Text><strong>Expiration Date:</strong> {formatDate(member.membership_expiration)}</Text>
@@ -279,6 +328,44 @@ export default function MemberDetails() {
                   Set Expired
                 </Button>
               </Group>
+            )}
+
+            <Divider my="sm" />
+
+            <Title order={4} mt="md">Check-in History</Title>
+            {checkIns && checkIns.length > 0 ? (
+              <Table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    {user?.role === 'admin' && <th>Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {checkIns.map((checkIn: CheckIn) => (
+                    <tr key={checkIn.id}>
+                      <td>{formatDate(checkIn.timestamp)}</td>
+                      <td>{new Date(checkIn.timestamp).toLocaleTimeString()}</td>
+                      {user?.role === 'admin' && (
+                        <td>
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="outline"
+                            onClick={() => deleteCheckInMutation.mutate(checkIn.id)}
+                            loading={deleteCheckInMutation.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <Text color="dimmed">No check-ins recorded</Text>
             )}
           </Stack>
         )}

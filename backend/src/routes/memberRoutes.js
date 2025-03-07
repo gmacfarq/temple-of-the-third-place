@@ -43,8 +43,8 @@ router.put('/:id/membership', auth, checkRole(['admin']), updateMembership);
 // DELETE /api/members/:id - Delete member (admin only)
 router.delete('/:id', auth, checkRole(['admin']), deleteMember);
 
-// GET /api/members/:id/checkins - Get member check-ins
-router.get('/:id/checkins', auth, getCheckIns);
+// GET /api/members/:id/check-ins - Get member check-ins
+router.get('/:id/check-ins', auth, getCheckIns);
 
 // DELETE /api/members/check-ins/:checkInId - Delete a specific check-in
 router.delete('/check-ins/:checkInId', auth, deleteCheckIn);
