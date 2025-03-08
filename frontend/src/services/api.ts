@@ -241,7 +241,7 @@ export const inventory = {
   recordTransfer: async (data: {
     sacramentId: number;
     quantity: number;
-    type: 'to_active' | 'to_storage' | 'add_storage';
+    type: 'to_active' | 'to_storage' | 'add_storage' | 'remove_storage';
     notes?: string;
   }) => {
     const response = await api.post('/api/inventory/transfer', data);
@@ -253,6 +253,21 @@ export const inventory = {
     notes?: string;
   }) => {
     const response = await api.post('/api/inventory/audit', data);
+    return response.data;
+  },
+  transfer: async (data: {
+    sacramentId: number;
+    quantity: number;
+    direction: string;
+  }) => {
+    const response = await api.post('/api/inventory/transfer', data);
+    return response.data;
+  },
+  remove: async (data: {
+    sacramentId: number;
+    quantity: number;
+  }) => {
+    const response = await api.post('/api/inventory/remove', data);
     return response.data;
   }
 };

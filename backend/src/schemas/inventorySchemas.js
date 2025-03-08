@@ -5,8 +5,8 @@ const transferSchema = z.object({
   body: z.object({
     sacramentId: z.number().positive('Sacrament ID is required'),
     quantity: z.number().positive('Quantity must be positive'),
-    type: z.enum(['to_active', 'to_storage', 'add_storage'], {
-      errorMap: () => ({ message: 'Transfer type must be to_active, to_storage, or add_storage' })
+    type: z.enum(['to_active', 'to_storage', 'add_storage', 'remove_storage'], {
+      errorMap: () => ({ message: 'Transfer type must be to_active, to_storage, add_storage, or remove_storage' })
     }),
     notes: z.string().optional()
   })

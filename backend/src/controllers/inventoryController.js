@@ -3,17 +3,11 @@ const pool = require('../config/database');
 const recordTransfer = async (req, res) => {
   try {
     const { sacramentId, quantity, type, notes } = req.body;
-    const userId = req.user.id;
-
-    if (!sacramentId || !quantity || !type) {
-      return res.status(400).json({ message: 'Sacrament ID, quantity, and type are required' });
-    }
-
     const connection = await pool.getConnection();
 
-    // Verify sacrament exists and get current quantities
+    // Get current inventory levels
     const [sacrament] = await connection.query(
-      'SELECT id, num_storage, num_active FROM sacraments WHERE id = ?',
+      'SELECT num_storage, num_active FROM sacraments WHERE id = ?',
       [sacramentId]
     );
 
@@ -22,64 +16,82 @@ const recordTransfer = async (req, res) => {
       return res.status(404).json({ message: 'Sacrament not found' });
     }
 
-    // Start transaction
-    await connection.beginTransaction();
+    const currentSacrament = sacrament[0];
+    let newStorageAmount = currentSacrament.num_storage;
+    let newActiveAmount = currentSacrament.num_active;
 
-    try {
-      // Update quantities based on transfer type
-      let newStorage = sacrament[0].num_storage;
-      let newActive = sacrament[0].num_active;
-
-      // Use the frontend types directly
-      if (type === 'to_active') {
-        // Check if there's enough in storage
-        if (sacrament[0].num_storage < quantity) {
-          await connection.rollback();
+    // Update inventory based on transfer type
+    switch (type) {
+      case 'to_active':
+        if (quantity > currentSacrament.num_storage) {
           connection.release();
           return res.status(400).json({ message: 'Not enough inventory in storage' });
         }
-        newStorage -= quantity;
-        newActive += quantity;
-      } else if (type === 'to_storage') {
-        // Check if there's enough in active
-        if (sacrament[0].num_active < quantity) {
-          await connection.rollback();
+        newStorageAmount = currentSacrament.num_storage - quantity;
+        newActiveAmount = currentSacrament.num_active + quantity;
+        break;
+      case 'to_storage':
+        if (quantity > currentSacrament.num_active) {
           connection.release();
           return res.status(400).json({ message: 'Not enough inventory in active' });
         }
-        newStorage += quantity;
-        newActive -= quantity;
-      } else if (type === 'add_storage') {
-        newStorage += quantity;
-      } else {
-        await connection.rollback();
+        newStorageAmount = currentSacrament.num_storage + quantity;
+        newActiveAmount = currentSacrament.num_active - quantity;
+        break;
+      case 'add_storage':
+        newStorageAmount = currentSacrament.num_storage + quantity;
+        break;
+      case 'remove_storage':
+        // Remove from storage first, then from active if needed
+        let remainingToRemove = quantity;
+
+        if (remainingToRemove <= currentSacrament.num_storage) {
+          // We can remove it all from storage
+          newStorageAmount = currentSacrament.num_storage - remainingToRemove;
+          remainingToRemove = 0;
+        } else {
+          // Remove all from storage and the rest from active
+          remainingToRemove -= currentSacrament.num_storage;
+          newStorageAmount = 0;
+          newActiveAmount = currentSacrament.num_active - remainingToRemove;
+        }
+
+        // Check if we have enough total inventory
+        if (quantity > (currentSacrament.num_storage + currentSacrament.num_active)) {
+          connection.release();
+          return res.status(400).json({ message: 'Not enough total inventory to remove' });
+        }
+        break;
+      default:
         connection.release();
         return res.status(400).json({ message: 'Invalid transfer type' });
-      }
-
-      // Record the transfer with the frontend type directly
-      await connection.query(
-        'INSERT INTO inventory_transfers (sacrament_id, quantity, type, notes, recorded_by) VALUES (?, ?, ?, ?, ?)',
-        [sacramentId, quantity, type, notes || null, userId]
-      );
-
-      // Update sacrament quantities
-      await connection.query(
-        'UPDATE sacraments SET num_storage = ?, num_active = ? WHERE id = ?',
-        [newStorage, newActive, sacramentId]
-      );
-
-      await connection.commit();
-      connection.release();
-      res.status(201).json({ message: 'Transfer recorded successfully' });
-    } catch (error) {
-      await connection.rollback();
-      connection.release();
-      throw error;
     }
+
+    // Update the sacrament inventory
+    await connection.query(
+      'UPDATE sacraments SET num_storage = ?, num_active = ? WHERE id = ?',
+      [newStorageAmount, newActiveAmount, sacramentId]
+    );
+
+    // Record the inventory transfer
+    await connection.query(
+      `INSERT INTO inventory_transfers
+      (sacrament_id, quantity, type, recorded_by, notes)
+      VALUES (?, ?, ?, ?, ?)`,
+      [
+        sacramentId,
+        quantity,
+        type,
+        req.user.userId,
+        notes || null
+      ]
+    );
+
+    connection.release();
+    res.json({ message: 'Inventory transfer recorded successfully' });
   } catch (error) {
     console.error('Error in recordTransfer:', error);
-    res.status(500).json({ message: 'Error recording transfer', error: error.message });
+    res.status(500).json({ message: 'Error recording inventory transfer' });
   }
 };
 
@@ -203,10 +215,84 @@ const getInventoryAudits = async (req, res) => {
   }
 };
 
+const removeInventory = async (req, res) => {
+  try {
+    const { sacramentId, quantity } = req.body;
+
+    if (!sacramentId || !quantity || quantity <= 0) {
+      return res.status(400).json({ message: 'Invalid request data' });
+    }
+
+    const connection = await pool.getConnection();
+
+    // Get current inventory levels
+    const [sacrament] = await connection.query(
+      'SELECT num_storage, num_active FROM sacraments WHERE id = ?',
+      [sacramentId]
+    );
+
+    if (sacrament.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Sacrament not found' });
+    }
+
+    const currentSacrament = sacrament[0];
+    const totalInventory = currentSacrament.num_storage + currentSacrament.num_active;
+
+    if (quantity > totalInventory) {
+      connection.release();
+      return res.status(400).json({ message: 'Not enough inventory to remove' });
+    }
+
+    // Remove from storage first, then from active if needed
+    let remainingToRemove = quantity;
+    let newStorageAmount = currentSacrament.num_storage;
+    let newActiveAmount = currentSacrament.num_active;
+
+    if (remainingToRemove <= currentSacrament.num_storage) {
+      // We can remove it all from storage
+      newStorageAmount = currentSacrament.num_storage - remainingToRemove;
+      remainingToRemove = 0;
+    } else {
+      // Remove all from storage and the rest from active
+      remainingToRemove -= currentSacrament.num_storage;
+      newStorageAmount = 0;
+      newActiveAmount = currentSacrament.num_active - remainingToRemove;
+    }
+
+    // Update the sacrament inventory
+    await connection.query(
+      'UPDATE sacraments SET num_storage = ?, num_active = ? WHERE id = ?',
+      [newStorageAmount, newActiveAmount, sacramentId]
+    );
+
+    // Record the inventory removal
+    await connection.query(
+      `INSERT INTO inventory_transfers
+      (sacrament_id, quantity, type, recorded_by, notes)
+      VALUES (?, ?, ?, ?, ?)`,
+      [
+        sacramentId,
+        quantity,
+        'remove_storage',
+        req.user.userId,
+        'Inventory removal'
+      ]
+    );
+
+    connection.release();
+    res.json({ message: 'Inventory removed successfully' });
+  } catch (error) {
+    console.error('Error in removeInventory:', error);
+    res.status(500).json({ message: 'Error removing inventory' });
+  }
+};
+
 module.exports = {
   recordTransfer,
   getInventoryHistory,
   getInventoryAlerts,
   recordAudit,
-  getInventoryAudits
+  getInventoryAudits,
+  removeInventory
 };

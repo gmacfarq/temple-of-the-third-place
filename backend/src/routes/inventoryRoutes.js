@@ -8,7 +8,8 @@ const {
   getInventoryHistory,
   getInventoryAlerts,
   recordAudit,
-  getInventoryAudits
+  getInventoryAudits,
+  removeInventory
 } = require('../controllers/inventoryController');
 
 
@@ -26,5 +27,8 @@ router.post('/audit', auth, checkRole(['admin']), validate(auditSchema), recordA
 
 // GET /api/inventory/audits - Get audit history
 router.get('/audits', auth, checkRole(['admin']), getInventoryAudits);
+
+// POST /api/inventory/remove - Remove inventory
+router.post('/remove', auth, removeInventory);
 
 module.exports = router;
