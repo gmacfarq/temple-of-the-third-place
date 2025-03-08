@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   TextInput,
   NumberInput,
@@ -9,10 +9,12 @@ import {
   Title,
   Select,
   Textarea,
-  Stack
+  Stack,
+  LoadingOverlay
 } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { sacraments } from '../../services/api';
+import { useNotifications } from '../../hooks/useNotifications';
 
 type SacramentType = 'chocolate' | 'dried_fruit' | 'capsule' | 'gummy' | 'psily_tart' | 'tincture' | 'other';
 
@@ -27,8 +29,15 @@ interface SacramentFormData {
 }
 
 export default function SacramentForm() {
+  const { id } = useParams();
+  const location = useLocation();
+  const isAddMode = location.pathname === '/sacraments/add';
+  const isEditMode = !isAddMode && id && !isNaN(Number(id));
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useNotifications();
+
   const [formData, setFormData] = useState<SacramentFormData>({
     name: '',
     type: 'chocolate',
@@ -39,22 +48,56 @@ export default function SacramentForm() {
     lowInventoryThreshold: 5,
   });
 
-  const addSacramentMutation = useMutation({
-    mutationFn: sacraments.create,
+  // Only fetch sacrament data if we're in edit mode
+  const { data: sacramentData, isLoading: isLoadingSacrament } = useQuery({
+    queryKey: ['sacrament', id],
+    queryFn: () => sacraments.getById(Number(id)),
+    enabled: isEditMode,
+    onError: () => {
+      showError('Failed to load sacrament data');
+      navigate('/sacraments');
+    }
+  });
+
+  // Update form data when sacrament data is loaded (for edit mode)
+  useEffect(() => {
+    if (sacramentData && isEditMode) {
+      setFormData({
+        name: sacramentData.name,
+        type: sacramentData.type as SacramentType,
+        strain: sacramentData.strain || '',
+        description: sacramentData.description || '',
+        numStorage: sacramentData.num_storage,
+        suggestedDonation: sacramentData.suggested_donation,
+        lowInventoryThreshold: sacramentData.low_inventory_threshold,
+      });
+    }
+  }, [sacramentData, isEditMode]);
+
+  const mutation = useMutation({
+    mutationFn: isEditMode
+      ? (data: SacramentFormData) => sacraments.update(Number(id), data)
+      : sacraments.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacraments'] });
+      showSuccess(`Sacrament ${isEditMode ? 'updated' : 'added'} successfully`);
       navigate('/sacraments');
     },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+      showError(`Failed to ${isEditMode ? 'update' : 'add'} sacrament: ${errorMessage}`);
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addSacramentMutation.mutate(formData);
+    mutation.mutate(formData);
   };
 
   return (
-    <Paper shadow="xs" p="md">
-      <Title order={2} mb="md">Add New Sacrament</Title>
+    <Paper shadow="xs" p="md" pos="relative">
+      <LoadingOverlay visible={isLoadingSacrament} />
+      <Title order={2} mb="md">{isEditMode ? 'Edit' : 'Add New'} Sacrament</Title>
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
           <TextInput
@@ -93,7 +136,7 @@ export default function SacramentForm() {
           />
 
           <NumberInput
-            label="Initial Storage Quantity"
+            label={isEditMode ? "Storage Quantity" : "Initial Storage Quantity"}
             value={formData.numStorage}
             onChange={(value) => setFormData({ ...formData, numStorage: Number(value || 0) })}
             min={0}
@@ -119,8 +162,11 @@ export default function SacramentForm() {
           />
 
           <Group justify="flex-end">
-            <Button type="submit" loading={addSacramentMutation.isPending}>
-              Add Sacrament
+            <Button variant="outline" onClick={() => navigate('/sacraments')}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={mutation.isPending}>
+              {isEditMode ? 'Update' : 'Add'} Sacrament
             </Button>
           </Group>
         </Stack>

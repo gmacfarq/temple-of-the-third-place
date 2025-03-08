@@ -51,8 +51,9 @@ export default function App() {
                     <Route path="/members/add" element={<MemberForm />} />
                     <Route path="/members/:id" element={<MemberDetails />} />
                     <Route path="/sacraments" element={<Sacraments />} />
-                    <Route path="/sacraments/new" element={<SacramentForm />} />
+                    <Route path="/sacraments/add" element={<SacramentForm />} />
                     <Route path="/sacraments/:id" element={<SacramentDetail />} />
+                    <Route path="/sacraments/:id/edit" element={<SacramentForm />} />
                     <Route path="/donations" element={<Donations />} />
                     <Route path="/inventory" element={<Inventory />} />
                     <Route path="/" element={<Navigate to="/members" />} />

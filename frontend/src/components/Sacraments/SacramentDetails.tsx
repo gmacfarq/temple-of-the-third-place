@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { NumberInput, Text, Badge } from '@mantine/core';
+import { NumberInput, Text, Badge, Button } from '@mantine/core';
+import { useNavigate } from 'react-router-dom';
 
 const SacramentDetails: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,8 @@ const SacramentDetails: React.FC = () => {
     num_storage: 10,
     num_active: 5,
   };
+
+  const navigate = useNavigate();
 
   return (
     <div>
@@ -29,6 +32,13 @@ const SacramentDetails: React.FC = () => {
           <Badge color="red" ml="xs">Currently Low</Badge>
         )}
       </Text>
+
+      <Button
+        onClick={() => navigate(`/sacraments/${id}/edit`)}
+        variant="outline"
+      >
+        Edit
+      </Button>
     </div>
   );
 };
