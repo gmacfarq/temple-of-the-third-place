@@ -1,26 +1,27 @@
-import { Modal, Text, Group, Button } from '@mantine/core';
+import { Modal, Text, Button, Group, Stack } from '@mantine/core';
+import React, { ReactNode } from 'react';
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  title?: string;
-  message?: string;
-  itemType?: string;
+  title: string;
+  message: string;
   isLoading?: boolean;
+  isConfirmDisabled?: boolean;
+  confirmationInput?: ReactNode;
 }
 
-export default function DeleteConfirmationModal({
+const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = "Confirm Deletion",
+  title,
   message,
-  itemType = "item",
-  isLoading = false
-}: DeleteConfirmationModalProps) {
-  const defaultMessage = `Are you sure you want to delete this ${itemType}?`;
-
+  isLoading = false,
+  isConfirmDisabled = false,
+  confirmationInput
+}) => {
   return (
     isOpen && (
       <Modal
@@ -38,14 +39,30 @@ export default function DeleteConfirmationModal({
           blur: 3
         }}
       >
-        <Text>{message || defaultMessage}</Text>
-        <Group justify="center" mt="md">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button color="red" onClick={onConfirm} loading={isLoading}>
-            Delete
-          </Button>
-        </Group>
+        <Stack>
+          <Text>{message}</Text>
+
+          {confirmationInput && (
+            <div>{confirmationInput}</div>
+          )}
+
+          <Group position="right" mt="md">
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={onConfirm}
+              loading={isLoading}
+              disabled={isConfirmDisabled}
+            >
+              Delete
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     )
   );
-}
+};
+
+export default DeleteConfirmationModal;

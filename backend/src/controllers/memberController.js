@@ -207,38 +207,51 @@ const getMemberStats = async (req, res) => {
 
 const deleteMember = async (req, res) => {
   try {
-    // Check authorization first
-    console.log('User role:', req.user.role); // Debug log
-
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
+    const { id } = req.params;
 
     const connection = await pool.getConnection();
 
-    // Debug log
-    console.log('Attempting to delete member:', req.params.id);
+    // Start a transaction to ensure all deletions succeed or fail together
+    await connection.beginTransaction();
 
-    // Then check if member exists
-    const [existingMember] = await connection.query(
-      'SELECT * FROM users WHERE id = ?',
-      [req.params.id]
-    );
+    try {
+      // Delete check-ins
+      await connection.query('DELETE FROM check_ins WHERE user_id = ?', [id]);
 
-    console.log('Found member:', existingMember[0]); // Debug log
+      // Delete donation items related to this member's donations
+      await connection.query(
+        'DELETE di FROM donation_items di JOIN donations d ON di.donation_id = d.id WHERE d.member_id = ?',
+        [id]
+      );
 
-    if (existingMember.length === 0) {
+      // Delete donations
+      await connection.query('DELETE FROM donations WHERE member_id = ?', [id]);
+
+      // Delete inventory transfers recorded by this member
+      await connection.query('DELETE FROM inventory_transfers WHERE recorded_by = ?', [id]);
+
+      // Delete inventory audits performed by this member
+      await connection.query('DELETE FROM inventory_audits WHERE audited_by = ?', [id]);
+
+      // Finally, delete the member
+      const [result] = await connection.query('DELETE FROM users WHERE id = ?', [id]);
+
+      // Commit the transaction
+      await connection.commit();
+
       connection.release();
-      return res.status(404).json({ message: 'Member not found' });
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Member not found' });
+      }
+
+      res.json({ message: 'Member deleted successfully' });
+    } catch (error) {
+      // If any query fails, roll back the transaction
+      await connection.rollback();
+      connection.release();
+      throw error;
     }
-
-    await connection.query(
-      'DELETE FROM users WHERE id = ?',
-      [req.params.id]
-    );
-
-    connection.release();
-    res.json({ message: 'Member deleted successfully' });
   } catch (error) {
     console.error('Error in deleteMember:', error);
     res.status(500).json({ message: 'Error deleting member' });

@@ -45,6 +45,8 @@ export default function MemberDetails() {
     phoneNumber: '',
     membershipType: 'Exploratory'
   });
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleteConfirmValid, setIsDeleteConfirmValid] = useState(false);
 
   const { data: member, isLoading } = useQuery({
     queryKey: ['member', id],
@@ -93,6 +95,13 @@ export default function MemberDetails() {
     }
   }, [member]);
 
+  useEffect(() => {
+    if (member) {
+      const expectedText = `Delete ${member.first_name}`;
+      setIsDeleteConfirmValid(deleteConfirmText === expectedText);
+    }
+  }, [deleteConfirmText, member]);
+
   const updateMutation = useMutation({
     mutationFn: (data: MemberFormData) => members.updateProfile(Number(id), data),
     onSuccess: () => {
@@ -123,11 +132,13 @@ export default function MemberDetails() {
   const deleteMutation = useMutation({
     mutationFn: () => members.delete(Number(id)),
     onSuccess: () => {
-      navigate('/members');
+      queryClient.invalidateQueries({ queryKey: ['members'] });
       showSuccess('Member deleted successfully');
+      navigate('/members');
     },
-    onError: (error) => {
-      showError(`Failed to delete member: ${(error as Error).message}`);
+    onError: (error: ApiError) => {
+      const errorMessage = error.response?.data?.message || 'Failed to delete member';
+      showError(errorMessage);
     }
   });
 
@@ -391,11 +402,24 @@ export default function MemberDetails() {
 
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteConfirmText('');
+        }}
         onConfirm={() => deleteMutation.mutate()}
         title="Delete Member"
-        message={`Are you sure you want to delete ${member.first_name} ${member.last_name}?`}
+        message={`Are you sure you want to delete ${member?.first_name} ${member?.last_name}? This will permanently remove all their data including check-ins, donations, and other records. This action cannot be undone.`}
         isLoading={deleteMutation.isPending}
+        isConfirmDisabled={!isDeleteConfirmValid}
+        confirmationInput={
+          <TextInput
+            label={`Type "Delete ${member?.first_name}" to confirm`}
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            error={deleteConfirmText !== '' && !isDeleteConfirmValid ? 'Text does not match' : null}
+            required
+          />
+        }
       />
     </div>
   );
