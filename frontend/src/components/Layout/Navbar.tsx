@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Group,
@@ -11,7 +10,8 @@ import {
   Box,
   Avatar,
   Menu,
-  rem
+  rem,
+  Badge
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconChevronDown, IconLogout, IconUser } from '@tabler/icons-react';
@@ -22,6 +22,9 @@ export default function Navbar() {
   const [opened, { toggle, close }] = useDisclosure(false);
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === 'admin';
+  const isAdvisor = user?.role === 'advisor';
 
   const handleLogout = () => {
     logout();
@@ -35,6 +38,16 @@ export default function Navbar() {
           <Text component={Link} to="/" size="xl" fw={700}>
             Temple of the Third Place
           </Text>
+          {isAdmin && (
+            <Badge color="red" size="lg" variant="filled">
+              ADMIN
+            </Badge>
+          )}
+          {isAdvisor && !isAdmin && (
+            <Badge color="blue" size="lg" variant="filled">
+              ADVISOR
+            </Badge>
+          )}
         </Group>
 
         <Group gap={5} visibleFrom="sm">
@@ -107,6 +120,18 @@ export default function Navbar() {
         <Stack>
           {isAuthenticated ? (
             <>
+              <Group>
+                {isAdmin && (
+                  <Badge color="red" size="lg" variant="filled">
+                    ADMIN
+                  </Badge>
+                )}
+                {isAdvisor && !isAdmin && (
+                  <Badge color="blue" size="lg" variant="filled">
+                    ADVISOR
+                  </Badge>
+                )}
+              </Group>
               <UnstyledButton component={Link} to="/dashboard" onClick={close}>
                 Dashboard
               </UnstyledButton>
