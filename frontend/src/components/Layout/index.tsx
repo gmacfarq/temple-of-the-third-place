@@ -1,49 +1,16 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { AppShell, Button, Group, Text } from '@mantine/core';
-import { useAuth } from '../../hooks/useAuth';
-
-interface LayoutProps {
-  children?: React.ReactNode;
-}
+import { AppShell } from '@mantine/core';
+import { Outlet } from 'react-router-dom';
+import Navbar from './Navbar';
 
 export default function Layout() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
     <AppShell
-      padding="md"
       header={{ height: 60 }}
-      navbar={{ width: 300, breakpoint: 'sm' }}
+      padding="md"
     >
-      <AppShell.Header p="xs">
-        <Group justify="apart">
-          <Text size="xl">Temple of the Third Place</Text>
-        </Group>
+      <AppShell.Header>
+        <Navbar />
       </AppShell.Header>
-
-      <AppShell.Navbar p="xs">
-        <Button component={Link} to="/members" fullWidth mb="sm">
-          Members
-        </Button>
-        <Button component={Link} to="/sacraments" fullWidth mb="sm">
-          Sacraments
-        </Button>
-        <Button component={Link} to="/donations" fullWidth mb="sm">
-          Donations
-        </Button>
-        <Button component={Link} to="/inventory" fullWidth mb="sm">
-          Inventory
-        </Button>
-        <Button onClick={handleLogout} color="red" fullWidth mt="auto">
-          Logout
-        </Button>
-      </AppShell.Navbar>
 
       <AppShell.Main>
         <Outlet />
