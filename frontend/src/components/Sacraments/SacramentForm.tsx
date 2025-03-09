@@ -15,7 +15,7 @@ import {
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { sacraments } from '../../services/api';
 import { useNotifications } from '../../hooks/useNotifications';
-
+import { ApiError } from '../../types/api';
 type SacramentType = 'chocolate' | 'dried_fruit' | 'capsule' | 'gummy' | 'psily_tart' | 'tincture' | 'other';
 
 interface SacramentFormData {
@@ -49,15 +49,18 @@ export default function SacramentForm() {
   });
 
   // Only fetch sacrament data if we're in edit mode
-  const { data: sacramentData, isLoading: isLoadingSacrament } = useQuery({
+  const { data: sacramentData, isLoading: isLoadingSacrament, error } = useQuery({
     queryKey: ['sacrament', id],
     queryFn: () => sacraments.getById(Number(id)),
-    enabled: isEditMode,
-    onError: () => {
+    enabled: isEditMode === true
+  });
+
+  useEffect(() => {
+    if (error) {
       showError('Failed to load sacrament data');
       navigate('/sacraments');
     }
-  });
+  }, [error, navigate, showError]);
 
   // Update form data when sacrament data is loaded (for edit mode)
   useEffect(() => {
@@ -83,7 +86,7 @@ export default function SacramentForm() {
       showSuccess(`Sacrament ${isEditMode ? 'updated' : 'added'} successfully`);
       navigate('/sacraments');
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
       showError(`Failed to ${isEditMode ? 'update' : 'add'} sacrament: ${errorMessage}`);
     }
@@ -155,7 +158,7 @@ export default function SacramentForm() {
             label="Low Inventory Threshold"
             description="Alert when total inventory falls below this number"
             value={formData.lowInventoryThreshold}
-            onChange={(value) => setFormData({ ...formData, lowInventoryThreshold: value || 5 })}
+            onChange={(value) => setFormData({ ...formData, lowInventoryThreshold: Number(value || 5) })}
             min={0}
             step={1}
             required

@@ -28,17 +28,23 @@ const getAllSacraments = async (req, res) => {
 
 const getSacramentById = async (req, res) => {
   try {
+    const { id } = req.params;
     const connection = await pool.getConnection();
+
     const [sacrament] = await connection.query(
-      'SELECT * FROM sacraments WHERE id = ?',
-      [req.params.id]
+      `SELECT id, name, type, strain, description, num_storage, num_active,
+      suggested_donation, low_inventory_threshold
+      FROM sacraments WHERE id = ?`,
+      [id]
     );
+
     connection.release();
 
     if (sacrament.length === 0) {
       return res.status(404).json({ message: 'Sacrament not found' });
     }
 
+    console.log('Sacrament data from DB:', sacrament[0]); // Debug log
     res.json(sacrament[0]);
   } catch (error) {
     console.error('Error in getSacramentById:', error);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, TextInput, Group, Paper, Text, LoadingOverlay, Select, Badge } from '@mantine/core';
-import { members, auth } from '../../services/api';
+import { Table, Button, Group, Paper, Text, LoadingOverlay, Badge } from '@mantine/core';
+import { members } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../types/api';
 import { useNavigate } from 'react-router-dom';
@@ -9,26 +9,9 @@ import MemberSearch from './MemberSearch';
 import { Member } from '../../types/member';
 import { notifications } from '@mantine/notifications';
 
-// Add role type
-type UserRole = 'member' | 'advisor' | 'admin';
-
-// Update form data interface
-interface MemberFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: UserRole;
-}
-
 export default function Members() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<MemberFormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    role: 'member'
-  });
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
   const [checkInId, setCheckInId] = useState<number | null>(null);
@@ -50,27 +33,6 @@ export default function Members() {
     }
   }, [membersList]);
 
-  // Add member mutation
-  const addMemberMutation = useMutation({
-    mutationFn: async (data: MemberFormData) => {
-      if (data.role === 'member') {
-        return auth.register(data);
-      } else {
-        return auth.registerPrivileged(data);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members'] });
-      setFormData({ firstName: '', lastName: '', email: '', role: 'member' });
-    },
-    onError: (error: ApiError) => {
-      console.error('Failed to create member:', {
-        error,
-        response: error.response?.data
-      });
-      // Add error notification here
-    }
-  });
 
   const checkInMutation = useMutation({
     mutationFn: (memberId: number) => members.checkIn(memberId),
@@ -93,11 +55,6 @@ export default function Members() {
       setCheckInId(null);
     }
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    addMemberMutation.mutate(formData);
-  };
 
   // Function to render membership status badge
   const renderStatusBadge = (status: string) => {
@@ -141,48 +98,6 @@ export default function Members() {
   return (
     <div style={{ position: 'relative' }}>
       <LoadingOverlay visible={isLoading} />
-
-      {/* Add Member Form */}
-      <Paper shadow="xs" p="md" mb="md">
-        <form onSubmit={handleSubmit}>
-          <Group>
-            <TextInput
-              label="First Name"
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              required
-            />
-            <TextInput
-              label="Last Name"
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              required
-            />
-            <TextInput
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-            <Select
-              label="Role"
-              value={formData.role}
-              onChange={(value) => setFormData({ ...formData, role: value as UserRole })}
-              data={[
-                { value: 'member', label: 'Member' },
-                { value: 'advisor', label: 'Advisor' },
-                { value: 'admin', label: 'Admin' }
-              ]}
-              required
-              defaultValue="member"
-            />
-            <Button type="submit" loading={addMemberMutation.isPending}>
-              Add Member
-            </Button>
-          </Group>
-        </form>
-      </Paper>
 
       {/* Member Search */}
       {membersList && (

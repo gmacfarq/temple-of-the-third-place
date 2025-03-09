@@ -163,8 +163,14 @@ export const sacraments = {
     return response.data;
   },
   getById: async (id: number) => {
-    const response = await api.get(`/api/sacraments/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/api/sacraments/${id}`);
+      console.log('Sacrament data:', response.data); // Debug log
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching sacrament:', error);
+      throw error;
+    }
   },
   create: async (data: {
     name: string;

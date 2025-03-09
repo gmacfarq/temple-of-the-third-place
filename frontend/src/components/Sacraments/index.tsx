@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { sacraments } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { Sacrament } from '../../types/sacrament';
+import { formatSacramentType } from '../../utils/formatters';
 
 export default function Sacraments() {
   const { user } = useAuth();
@@ -21,18 +22,19 @@ export default function Sacraments() {
     queryFn: sacraments.getAll
   });
 
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading sacraments</div>;
+
   return (
     <div>
-      <Paper shadow="xs" p="md" mb="md">
-        <Group justify="space-between" mb="md">
+      <Paper shadow="xs" p="md">
+        <Group position="apart" mb="md">
           <Title order={2}>Sacraments</Title>
-          <Group>
-            {user?.role === 'admin' && (
-              <Button onClick={() => navigate('/sacraments/add')}>
-                Add Sacrament
-              </Button>
-            )}
-          </Group>
+          {user?.role === 'admin' && (
+            <Button onClick={() => navigate('/sacraments/add')}>
+              Add Sacrament
+            </Button>
+          )}
         </Group>
 
         <Table>
@@ -52,8 +54,8 @@ export default function Sacraments() {
             {sacramentsList?.map((sacrament: Sacrament) => (
               <tr key={sacrament.id}>
                 <td>{sacrament.name}</td>
-                <td>{sacrament.type}</td>
-                <td>{sacrament.strain || 'N/A'}</td>
+                <td>{formatSacramentType(sacrament.type)}</td>
+                <td>{sacrament.strain || '-'}</td>
                 <td>{sacrament.num_storage}</td>
                 <td>{sacrament.num_active}</td>
                 <td>

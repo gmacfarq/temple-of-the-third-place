@@ -9,3 +9,17 @@ export const formatDate = (dateString: string): string => {
     hour12: true
   }).format(date);
 };
+
+export const formatSacramentType = (type: string): string => {
+  const typeMap: Record<string, string> = {
+    'chocolate': 'Chocolate',
+    'dried_fruit': 'Dried Fruit',
+    'capsule': 'Capsule',
+    'gummy': 'Gummy',
+    'psily_tart': 'Psily Tart',
+    'tincture': 'Tincture',
+    'other': 'Other'
+  };
+
+  return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+};

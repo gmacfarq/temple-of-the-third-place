@@ -177,7 +177,7 @@ export default function InventoryList({ sacraments }: { sacraments: Sacrament[] 
           <NumberInput
             label="Quantity to Remove"
             value={removeQuantity}
-            onChange={(value) => setRemoveQuantity(value)}
+            onChange={(value) => setRemoveQuantity(Number(value))}
             min={1}
             max={selectedSacrament ? (selectedSacrament.num_storage + selectedSacrament.num_active) : 999}
             required
