@@ -11,12 +11,14 @@ import {
   Avatar,
   Menu,
   rem,
-  Badge
+  Badge,
+  Image
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconChevronDown, IconLogout, IconUser } from '@tabler/icons-react';
 import { useAuth } from '../../hooks/useAuth';
 import classes from './Navbar.module.css';
+import templeLogoImage from '../../assets/Images/temple-logo.png';
 
 export default function Navbar() {
   const [opened, { toggle, close }] = useDisclosure(false);
@@ -35,9 +37,9 @@ export default function Navbar() {
     <Box className={classes.header}>
       <Group justify="space-between" h="100%">
         <Group>
-          <Text component={Link} to="/" size="xl" fw={700}>
-            Temple of the Third Place
-          </Text>
+          <Link to="/">
+            <Image src={templeLogoImage} alt="Temple of the Third Place" height={40} />
+          </Link>
           {isAdmin && (
             <Badge color="red" size="lg" variant="filled">
               ADMIN
@@ -113,7 +115,7 @@ export default function Navbar() {
         onClose={close}
         size="100%"
         padding="md"
-        title="Menu"
+        title={<Image src={templeLogoImage} alt="Temple of the Third Place" height={30} />}
         hiddenFrom="sm"
         zIndex={1000}
       >

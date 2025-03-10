@@ -46,7 +46,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
             <div>{confirmationInput}</div>
           )}
 
-          <Group position="right" mt="md">
+          <Group justify="flex-end" mt="md">
             <Button variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>

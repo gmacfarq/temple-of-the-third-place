@@ -3,8 +3,8 @@ import { createTheme } from '@mantine/core';
 export const templeTheme = createTheme({
   primaryColor: 'dark',
   colors: {
-    // Adding a custom color palette that's more monochromatic
-    brand: [
+    // Monochromatic palette
+    dark: [
       '#f8f9fa',
       '#e9ecef',
       '#dee2e6',
@@ -17,9 +17,9 @@ export const templeTheme = createTheme({
       '#000000',
     ],
   },
-  fontFamily: 'Inter, sans-serif',
+  fontFamily: 'Helvetica Neue, Arial, sans-serif',
   headings: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Helvetica Neue, Arial, sans-serif',
     fontWeight: '700',
     sizes: {
       h1: { fontSize: '2.5rem', lineHeight: '1.2' },
@@ -30,17 +30,18 @@ export const templeTheme = createTheme({
   components: {
     Button: {
       defaultProps: {
-        radius: 'xs',
+        radius: 0,
         variant: 'filled',
       },
       styles: (theme) => ({
         root: {
           fontWeight: 600,
-          letterSpacing: '0.03em',
+          letterSpacing: '0.05em',
           textTransform: 'uppercase',
           boxShadow: 'none',
           '&:hover': {
             boxShadow: theme.shadows.sm,
+            backgroundColor: theme.colors.dark[9],
           },
         },
       }),
@@ -48,14 +49,20 @@ export const templeTheme = createTheme({
     Paper: {
       defaultProps: {
         shadow: 'xs',
-        radius: 'xs',
+        radius: 0,
         p: 'xl',
       },
     },
     Badge: {
       defaultProps: {
-        radius: 'xs',
+        radius: 0,
       },
+      styles: {
+        root: {
+          textTransform: 'uppercase',
+          fontWeight: 700,
+        }
+      }
     },
     Text: {
       styles: {
@@ -67,11 +74,17 @@ export const templeTheme = createTheme({
     Title: {
       styles: {
         root: {
-          letterSpacing: '0.02em',
+          letterSpacing: '0.05em',
           textTransform: 'uppercase',
+        }
+      }
+    },
+    Image: {
+      styles: {
+        root: {
+          maxWidth: '100%',
         }
       }
     }
   },
-});
 });

@@ -41,7 +41,7 @@ class ErrorBoundary extends Component<Props, State> {
           <Text mb="lg">
             We're sorry, but there was an error in the application. Please reload the page.
           </Text>
-          <Group>
+          <Group justify="flex-end">
             <Button onClick={() => window.location.reload()}>
               Reload Page
             </Button>

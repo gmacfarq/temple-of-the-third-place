@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import { Select, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { sacraments } from '../../services/api';
+import { Sacrament } from '../../types/sacrament';
 
 interface SacramentSearchProps {
   value: number | null;
@@ -32,14 +32,14 @@ export default function SacramentSearch({
   };
 
   // Simple data format without custom rendering
-  const selectData = sacramentsList?.map(sacrament => ({
+  const selectData = sacramentsList?.map((sacrament: Sacrament) => ({
     value: sacrament.id.toString(),
     label: `${sacrament.name} (${sacrament.type}) - ${sacrament.num_active} available`
   })) || [];
 
   return (
     <div>
-      {label && <Text weight={500} size="sm" mb={5}>{label}</Text>}
+      {label && <Text fw={500} size="sm" mb={5}>{label}</Text>}
       <Select
         placeholder={placeholder}
         data={selectData}
@@ -47,7 +47,6 @@ export default function SacramentSearch({
         onChange={handleChange}
         searchable
         clearable
-        nothingFound="No sacraments found"
         required={required}
         error={error}
         disabled={disabled || isLoading}
