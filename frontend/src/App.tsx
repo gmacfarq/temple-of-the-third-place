@@ -22,6 +22,7 @@ import Profile from './components/Profile';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
+import { templeTheme } from './theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,7 +36,7 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider>
+      <MantineProvider theme={templeTheme}>
         <Notifications />
         <AuthProvider>
           <ErrorBoundary>
