@@ -16,7 +16,7 @@ export default function Login() {
     try {
       await login(email, password);
       showSuccess('Login successful');
-      navigate('/members');
+      navigate('/dashboard');
     } catch (error: Error | unknown) {
       const message = error instanceof Error ? error.message : 'Invalid email or password';
       showError(message);

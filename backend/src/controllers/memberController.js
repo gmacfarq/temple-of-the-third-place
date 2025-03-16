@@ -399,6 +399,46 @@ const updateMembership = async (req, res) => {
   }
 };
 
+const updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['Pending', 'Active', 'Expired'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+
+    const connection = await pool.getConnection();
+
+    // Update the member's status
+    await connection.query(
+      'UPDATE users SET membership_status = ? WHERE id = ?',
+      [status, id]
+    );
+
+    // If status is Active, set membership expiration to 1 year from now
+    if (status === 'Active') {
+      const expirationDate = new Date();
+      expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+      const formattedExpirationDate = expirationDate.toISOString().split('T')[0];
+
+      await connection.query(
+        'UPDATE users SET membership_expiration = ? WHERE id = ?',
+        [formattedExpirationDate, id]
+      );
+    }
+
+    connection.release();
+
+    res.status(200).json({ message: 'Member status updated successfully' });
+  } catch (error) {
+    console.error('Error updating member status:', error);
+    res.status(500).json({ message: 'Error updating member status' });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -411,5 +451,6 @@ module.exports = {
   checkIn,
   deleteCheckIn,
   getRecentCheckIns,
-  updateMembership
+  updateMembership,
+  updateStatus
 };

@@ -13,7 +13,8 @@ const {
   checkIn,
   deleteCheckIn,
   getRecentCheckIns,
-  updateMembership
+  updateMembership,
+  updateStatus
 } = require('../controllers/memberController');
 
 // Place this BEFORE any routes with :id parameter
@@ -48,5 +49,8 @@ router.get('/:id/check-ins', auth, getCheckIns);
 
 // DELETE /api/members/check-ins/:checkInId - Delete a specific check-in
 router.delete('/check-ins/:checkInId', auth, deleteCheckIn);
+
+// PATCH /api/members/:id/status - Update member status (admin or advisor only)
+router.patch('/:id/status', auth, checkRole(['admin', 'advisor']), updateStatus);
 
 module.exports = router;

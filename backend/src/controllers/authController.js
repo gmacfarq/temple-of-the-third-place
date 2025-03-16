@@ -9,10 +9,14 @@ const register = async (req, res) => {
       firstName,
       lastName,
       email,
-      password = 'DefaultPass123!', // Default password if not provided
+      password,
       birthDate,
       phoneNumber,
-      membershipType = 'Exploratory'
+      membershipType = 'Exploratory',
+      doctrineAgreed,
+      membershipAgreed,
+      medicalAgreed,
+      agreementTimestamp
     } = req.body;
 
     // Validate input
@@ -36,54 +40,87 @@ const register = async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Calculate membership status based on age
-    let membershipStatus = 'Active';
-    if (birthDate) {
-      const birthDateObj = new Date(birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birthDateObj.getFullYear();
-      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+    // Check if the agreement columns exist in the users table
+    const [columns] = await connection.query('SHOW COLUMNS FROM users');
+    const columnNames = columns.map(col => col.Field);
 
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
-        age--;
-      }
+    const hasAgreementColumns =
+      columnNames.includes('doctrine_agreed') &&
+      columnNames.includes('membership_agreed') &&
+      columnNames.includes('medical_agreed') &&
+      columnNames.includes('agreement_timestamp');
 
-      if (age < 21) {
-        membershipStatus = 'Pending';
-      }
+    // Format the agreement timestamp for MySQL
+    let formattedTimestamp = null;
+    if (agreementTimestamp) {
+      // Convert ISO string to MySQL datetime format
+      const date = new Date(agreementTimestamp);
+      formattedTimestamp = date.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
     }
 
-    // Calculate membership expiration (1 year from now)
-    const expirationDate = new Date();
-    expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-    const formattedExpirationDate = expirationDate.toISOString().split('T')[0];
+    let result;
 
-    // Insert new user
-    const [result] = await connection.query(
-      `INSERT INTO users (
-        first_name,
-        last_name,
-        email,
-        password_hash,
-        role,
-        birth_date,
-        phone_number,
-        membership_type,
-        membership_status,
-        membership_expiration
-      ) VALUES (?, ?, ?, ?, 'member', ?, ?, ?, ?, ?)`,
-      [
-        firstName,
-        lastName,
-        email,
-        passwordHash,
-        birthDate || null,
-        phoneNumber || null,
-        membershipType,
-        membershipStatus,
-        membershipStatus === 'Active' ? formattedExpirationDate : null
-      ]
-    );
+    if (hasAgreementColumns) {
+      // Insert with agreement fields
+      [result] = await connection.query(
+        `INSERT INTO users (
+          first_name,
+          last_name,
+          email,
+          password_hash,
+          birth_date,
+          phone_number,
+          membership_type,
+          membership_status,
+          doctrine_agreed,
+          membership_agreed,
+          medical_agreed,
+          agreement_timestamp,
+          role
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          firstName,
+          lastName,
+          email,
+          passwordHash,
+          birthDate || null,
+          phoneNumber || null,
+          membershipType,
+          'Pending',
+          doctrineAgreed ? 1 : 0,
+          membershipAgreed ? 1 : 0,
+          medicalAgreed ? 1 : 0,
+          formattedTimestamp,
+          'member'
+        ]
+      );
+    } else {
+      // Insert without agreement fields (for backward compatibility)
+      [result] = await connection.query(
+        `INSERT INTO users (
+          first_name,
+          last_name,
+          email,
+          password_hash,
+          birth_date,
+          phone_number,
+          membership_type,
+          membership_status,
+          role
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          firstName,
+          lastName,
+          email,
+          passwordHash,
+          birthDate || null,
+          phoneNumber || null,
+          membershipType,
+          'Pending',
+          'member'
+        ]
+      );
+    }
 
     const userId = result.insertId;
 
@@ -108,7 +145,7 @@ const register = async (req, res) => {
         birthDate,
         phoneNumber,
         membershipType,
-        membershipStatus
+        membershipStatus: 'Pending'
       }
     });
   } catch (error) {

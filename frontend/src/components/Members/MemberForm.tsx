@@ -42,7 +42,14 @@ export default function MemberForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addMemberMutation.mutate(formData);
+
+    // Set default status to Pending for new members
+    const memberData = {
+      ...formData,
+      membershipStatus: 'Pending'
+    };
+
+    addMemberMutation.mutate(memberData);
   };
 
   return (

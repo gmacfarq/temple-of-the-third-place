@@ -54,7 +54,10 @@ export const auth = {
     phoneNumber?: string;
     membershipType?: string;
   }) => {
-    const response = await api.post('/api/auth/register', data);
+    const response = await api.post('/api/auth/register', {
+      ...data,
+      membershipStatus: 'Pending'
+    });
     return response.data;
   },
   registerPrivileged: async (data: { firstName: string; lastName: string; email: string; role: string }) => {
@@ -80,25 +83,8 @@ export const members = {
     return response.data;
   },
   create: async (data: { firstName: string; lastName: string; email: string }) => {
-    const requestData = {
-      email: data.email.toLowerCase().trim(),
-      firstName: data.firstName.trim(),
-      lastName: data.lastName.trim(),
-      password: 'DefaultPass123!',
-      role: 'member'
-    };
-    console.log('Sending request:', requestData);
-    try {
-      const response = await api.post('/api/auth/register-privileged', requestData);
-      return response.data;
-    } catch (error) {
-      console.error('Registration error:', {
-        status: (error as ApiError).response?.status,
-        data: (error as ApiError).response?.data,
-        message: (error as ApiError).message
-      });
-      throw error;
-    }
+    const response = await api.post('/api/members', data);
+    return response.data;
   },
   delete: async (id: number) => {
     const response = await api.delete(`/api/members/${id}`);
@@ -117,7 +103,7 @@ export const members = {
     return response.data;
   },
   checkIn: async (id: number) => {
-    const response = await api.put(`/api/members/${id}/checkin`);
+    const response = await api.post(`/api/members/${id}/check-in`);
     return response.data;
   },
   getCheckIns: async (id: number) => {
@@ -153,6 +139,10 @@ export const members = {
     expirationDate?: string;
   }) => {
     const response = await api.put(`/api/members/${id}/membership`, data);
+    return response.data;
+  },
+  updateStatus: async (id: number, status: string) => {
+    const response = await api.patch(`/api/members/${id}/status`, { status });
     return response.data;
   }
 };

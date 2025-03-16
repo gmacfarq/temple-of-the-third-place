@@ -23,7 +23,12 @@ CREATE TABLE users (
     membership_status ENUM('Pending', 'Active', 'Expired') DEFAULT 'Pending',
     birth_date DATE,
     phone_number VARCHAR(20),
-    membership_expiration DATE
+    membership_expiration DATE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    doctrine_agreed BOOLEAN DEFAULT FALSE,
+    membership_agreed BOOLEAN DEFAULT FALSE,
+    medical_agreed BOOLEAN DEFAULT FALSE,
+    agreement_timestamp DATETIME
 );
 
 -- Sacraments

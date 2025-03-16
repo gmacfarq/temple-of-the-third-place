@@ -21,6 +21,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import DoctrineAgreement from './DoctrineAgreement';
 import MembershipAgreement from './MembershipAgreement';
 import MedicalWaiver from './MedicalWaiver';
+import { ApiError } from '../../types/api';
 
 export default function MemberSignup() {
   const navigate = useNavigate();
@@ -47,11 +48,15 @@ export default function MemberSignup() {
   const signupMutation = useMutation({
     mutationFn: auth.register,
     onSuccess: () => {
-      showSuccess('Account created successfully', 'Please check your email for verification instructions');
+      showSuccess(
+        'Application submitted successfully',
+        'Your membership is pending approval. Please visit our temple in person to complete the process.'
+      );
       navigate('/login');
     },
-    onError: (error: any) => {
-      showError('Error creating account', error.response?.data?.message || 'An error occurred');
+    onError: (error: ApiError | unknown) => {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      showError('Error creating account', message);
     }
   });
 
@@ -59,7 +64,7 @@ export default function MemberSignup() {
     e.preventDefault();
 
     if (!agreements.doctrine || !agreements.membership || !agreements.medical) {
-      showError('Agreement Required', 'You must agree to all required documents to continue');
+      showError('Agreement Required', 'You must agree to all terms to join');
       return;
     }
 
@@ -82,13 +87,18 @@ export default function MemberSignup() {
       return;
     }
 
+    // Format the agreement timestamp for MySQL compatibility
+    const now = new Date();
+    const formattedTimestamp = now.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+
     signupMutation.mutate({
       ...formData,
       birthDate: formData.birthDate?.toISOString().split('T')[0],
-      agreementTimestamp: new Date().toISOString(),
+      agreementTimestamp: formattedTimestamp,
       doctrineAgreed: agreements.doctrine,
       membershipAgreed: agreements.membership,
-      medicalAgreed: agreements.medical
+      medicalAgreed: agreements.medical,
+      membershipStatus: 'Pending'
     });
   };
 
@@ -226,7 +236,7 @@ export default function MemberSignup() {
               Cancel
             </Button>
             <Button type="submit" disabled={!agreements.doctrine || !agreements.membership || !agreements.medical}>
-              Join Temple
+              Join
             </Button>
           </Group>
         </Stack>

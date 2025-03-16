@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, Group, Paper, Text, LoadingOverlay, Badge } from '@mantine/core';
+import { Table, Button, Group, Paper, Text, LoadingOverlay, Badge, Title } from '@mantine/core';
 import { members } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../types/api';
@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import MemberSearch from './MemberSearch';
 import { Member } from '../../types/member';
 import { notifications } from '@mantine/notifications';
+import { useNotifications } from '../../hooks/useNotifications';
+import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 
 export default function Members() {
   const { user } = useAuth();
@@ -15,9 +17,12 @@ export default function Members() {
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const navigate = useNavigate();
   const [checkInId, setCheckInId] = useState<number | null>(null);
+  const { showSuccess, showError } = useNotifications();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
 
   // Fetch members
-  const { data: membersList, isLoading, error } = useQuery({
+  const { data: membersList, isLoading, error, refetch } = useQuery({
     queryKey: ['members'],
     queryFn: members.getAll,
     select: (data) => {
@@ -26,6 +31,11 @@ export default function Members() {
     }
   });
 
+  // Refresh data when component mounts
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   // Set filtered members when membersList changes
   useEffect(() => {
     if (membersList) {
@@ -33,28 +43,69 @@ export default function Members() {
     }
   }, [membersList]);
 
+  // Make sure data is an array before filtering
+  const membersListArray: Member[] = Array.isArray(membersList) ? membersList : [];
 
+  // Add a filter for pending members
+  const pendingMembers = membersListArray.filter(member => member.membership_status === 'Pending');
+
+  // Mutation for updating member status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      members.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      showSuccess('Member status updated successfully');
+    },
+    onError: (error) => {
+      showError('Failed to update member status', error.message);
+    }
+  });
+
+  // Mutation for checking in a member
   const checkInMutation = useMutation({
     mutationFn: (memberId: number) => members.checkIn(memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
-      notifications.show({
-        title: 'Member checked in successfully',
-        message: 'Member checked in successfully',
-        color: 'green'
-      });
-      setCheckInId(null);
+      showSuccess('Member checked in successfully');
     },
-    onError: (error: ApiError) => {
-      const errorMessage = error.response?.data?.message || 'Failed to check in member';
-      notifications.show({
-        title: 'Error',
-        message: errorMessage,
-        color: 'red'
-      });
-      setCheckInId(null);
+    onError: (error) => {
+      showError('Failed to check in member', error.message);
     }
   });
+
+  // Mutation for deleting a member
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => members.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      showSuccess('Member deleted successfully');
+      setDeleteModalOpen(false);
+    },
+    onError: (error) => {
+      showError('Failed to delete member', error.message);
+    }
+  });
+
+  const handleDeleteClick = (id: number) => {
+    setMemberToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (memberToDelete) {
+      deleteMutation.mutate(memberToDelete);
+    }
+  };
+
+  const updateMemberStatus = (id: number, status: string) => {
+    updateStatusMutation.mutate({ id, status });
+  };
+
+  const checkInMember = (memberId: number) => {
+    setCheckInId(memberId);
+    checkInMutation.mutate(memberId);
+  };
 
   // Function to render membership status badge
   const renderStatusBadge = (status: string) => {
@@ -79,12 +130,6 @@ export default function Members() {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
-  };
-
-  // Add a handler function for check-ins
-  const handleCheckIn = (memberId: number) => {
-    setCheckInId(memberId);
-    checkInMutation.mutate(memberId);
   };
 
   // Only render if user is admin
@@ -150,7 +195,7 @@ export default function Members() {
                         size="xs"
                         variant="outline"
                         color="green"
-                        onClick={() => handleCheckIn(member.id)}
+                        onClick={() => checkInMember(member.id)}
                         loading={checkInMutation.isPending && checkInId === member.id}
                       >
                         Check In
@@ -163,6 +208,58 @@ export default function Members() {
           </tbody>
         </Table>
       </Paper>
+
+      {/* Pending Members */}
+      {pendingMembers.length > 0 && (
+        <Paper p="md" withBorder mb="xl">
+          <Title order={3} mb="md" color="yellow">Pending Approvals ({pendingMembers.length})</Title>
+          <Text mb="md">The following members require in-person verification and approval:</Text>
+          <Table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingMembers.map(member => (
+                <tr key={member.id}>
+                  <td>{member.first_name} {member.last_name}</td>
+                  <td>{member.email}</td>
+                  <td>{new Date(member.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <Group spacing="xs">
+                      <Button
+                        size="xs"
+                        onClick={() => navigate(`/members/${member.id}`)}
+                      >
+                        Review
+                      </Button>
+                      <Button
+                        size="xs"
+                        color="green"
+                        onClick={() => updateMemberStatus(member.id, 'Active')}
+                      >
+                        Approve
+                      </Button>
+                    </Group>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Paper>
+      )}
+
+      <DeleteConfirmationModal
+        opened={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Member"
+        message="Are you sure you want to delete this member? This action cannot be undone."
+      />
     </div>
   );
 }
